@@ -1096,6 +1096,38 @@ public typealias Status = String
 
 # Extensions
 
+## `extensions.infoName`
+
+Type: `string`
+Default: `Info`
+
+Sets the type name and filename for the generated OpenAPI document info helper.
+
+<details>
+<summary>Example</summary>
+
+Default:
+```swift
+public struct Info: Sendable {
+    // ...
+}
+```
+
+Option:
+```yaml
+extensions:
+  infoName: APIInfo
+```
+
+Result:
+```swift
+public struct APIInfo: Sendable {
+    // ...
+}
+```
+
+</details>
+
 ## `extensions.emit`
 
 Type: `[pathsNamespace | stringCodingKey | anyJSON | indirect | info]`  

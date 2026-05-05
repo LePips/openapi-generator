@@ -9,7 +9,6 @@ let package = Package(
     ],
     products: [
         .executable(name: "openapi-generator", targets: ["GeneratorExecutable"]),
-        .executable(name: "GeneratorExecutable", targets: ["GeneratorExecutable"]),
         .plugin(name: "OpenAPIGeneratorPlugin", targets: ["OpenAPIGeneratorPlugin"]),
     ],
     dependencies: [

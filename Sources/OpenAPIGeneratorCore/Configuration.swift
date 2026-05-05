@@ -360,16 +360,19 @@ public struct Extensions: Decodable, Sendable {
         .indirect,
         .info
     ]
+    public var infoName: String = "Info"
 
     public init() {}
 
     enum CodingKeys: String, CodingKey {
         case emit
+        case infoName
     }
 
     public init(from decoder: Decoder) throws {
         self.init()
         let container = try decoder.container(keyedBy: CodingKeys.self)
         emit = try container.decodeIfPresent(Set<Emit>.self, forKey: .emit) ?? emit
+        infoName = try container.decodeIfPresent(String.self, forKey: .infoName) ?? infoName
     }
 }

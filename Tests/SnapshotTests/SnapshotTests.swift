@@ -575,6 +575,20 @@ struct SnapshotTests {
     }
 
     @Test
+    func `config info name`() throws {
+        var config = helperConfig()
+        config.extensions.emit = [.info]
+        config.extensions.infoName = "APIInfo"
+
+        try DirectorySnapshot.assert(
+            named: "config-info-name",
+            spec: "config-info-full.yaml",
+            config: config,
+            fileFilter: ["Extensions/APIInfo.swift"]
+        )
+    }
+
+    @Test
     func `config paths namespace`() throws {
         var config = helperConfig()
         config.paths.namespace = "APIRoutes"

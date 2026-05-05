@@ -4,143 +4,87 @@ on:
   push:
     tags:
       - "v*"
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: "Existing tag to build and publish. Defaults to the selected tag ref."
-        required: false
-        type: string
 
 permissions:
   contents: write
 
-concurrency:
-  group: release-binary-${{ github.ref }}
-  cancel-in-progress: false
-
 env:
   PRODUCT_NAME: openapi-generator
+  ARTIFACT_BUNDLE_NAME: openapi-generator.artifactbundle
 
 jobs:
-  build:
-    name: Build ${{ matrix.asset_arch }}
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - runner: macos-15
-            asset_arch: arm64
-          - runner: macos-15-intel
-            asset_arch: x86_64
+  release:
+    name: Build and publish release binary
+    runs-on: macos-15
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Resolve release tag
-        id: release
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" && -n "${{ inputs.tag }}" ]]; then
-            tag="${{ inputs.tag }}"
-            git fetch --force --tags origin
-            git checkout --detach "refs/tags/${tag}"
-          elif [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
-            tag="${GITHUB_REF_NAME}"
-          else
-            tag="$(git describe --tags --exact-match 2>/dev/null || true)"
-          fi
-
-          if [[ -z "${tag}" ]]; then
-            echo "Release binary builds must run from a tag or be given a tag input." >&2
-            exit 1
-          fi
-
-          echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
+        uses: actions/checkout@v6
 
       - name: Build release binary
-        run: swift build -c release --product "${PRODUCT_NAME}"
+        run: swift build --disable-sandbox -c release --product "${PRODUCT_NAME}" --arch arm64
 
-      - name: Smoke test binary
-        run: .build/release/"${PRODUCT_NAME}" --help > /dev/null
-
-      - name: Package release artifact
+      - name: Prepare artifact bundle
         shell: bash
         run: |
           set -euo pipefail
 
-          version="${{ steps.release.outputs.tag }}"
-          asset_base="${PRODUCT_NAME}-${version}-macos-${{ matrix.asset_arch }}"
-          staging="${RUNNER_TEMP}/${asset_base}"
+          version="${GITHUB_REF_NAME#v}"
+          bundle_path="dist/${ARTIFACT_BUNDLE_NAME}"
+          variant_path="${PRODUCT_NAME}-macos-arm64/bin"
 
-          mkdir -p "${staging}" dist
-          cp ".build/release/${PRODUCT_NAME}" "${staging}/${PRODUCT_NAME}"
-          strip "${staging}/${PRODUCT_NAME}" || true
+          mkdir -p "${bundle_path}/${variant_path}"
+          cp ".build/release/${PRODUCT_NAME}" "${bundle_path}/${variant_path}/${PRODUCT_NAME}"
+          strip "${bundle_path}/${variant_path}/${PRODUCT_NAME}" || true
 
-          tar -C "${RUNNER_TEMP}" -czf "dist/${asset_base}.tar.gz" "${asset_base}"
-          shasum -a 256 "dist/${asset_base}.tar.gz" > "dist/${asset_base}.tar.gz.sha256"
+          cat > "${bundle_path}/info.json" <<EOF
+          {
+            "schemaVersion": "1.0",
+            "artifacts": {
+              "${PRODUCT_NAME}": {
+                "type": "executable",
+                "version": "${version}",
+                "variants": [
+                  {
+                    "path": "${variant_path}/${PRODUCT_NAME}",
+                    "supportedTriples": ["arm64-apple-macosx"]
+                  }
+                ]
+              }
+            }
+          }
+          EOF
 
-      - name: Upload workflow artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-assets-${{ matrix.asset_arch }}
-          path: dist/*
-          if-no-files-found: error
+      - name: Zip artifact bundle
+        working-directory: dist
+        run: 7z a -tzip "${ARTIFACT_BUNDLE_NAME}.zip" "${ARTIFACT_BUNDLE_NAME}"
 
-  publish:
-    name: Publish GitHub release artifacts
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Resolve release tag
-        id: release
+      - name: Generate release notes
         shell: bash
         run: |
           set -euo pipefail
 
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" && -n "${{ inputs.tag }}" ]]; then
-            tag="${{ inputs.tag }}"
-          elif [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
-            tag="${GITHUB_REF_NAME}"
-          else
-            tag="$(git describe --tags --exact-match 2>/dev/null || true)"
-          fi
+          zip_path="dist/${ARTIFACT_BUNDLE_NAME}.zip"
+          checksum="$(swift package compute-checksum "${zip_path}")"
+          artifact_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/${ARTIFACT_BUNDLE_NAME}.zip"
 
-          if [[ -z "${tag}" ]]; then
-            echo "Release publishing must run from a tag or be given a tag input." >&2
-            exit 1
-          fi
+          cat > "${RUNNER_TEMP}/release-notes.md" <<EOF
+          ## Artifact Bundle
 
-          echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
+          \`\`\`swift
+          .binaryTarget(
+              name: "${PRODUCT_NAME}",
+              url: "${artifact_url}",
+              checksum: "${checksum}"
+          )
+          \`\`\`
+          EOF
 
-      - name: Download release artifacts
-        uses: actions/download-artifact@v4
+      - name: Publish GitHub release artifacts
+        uses: softprops/action-gh-release@v3
         with:
-          pattern: release-assets-*
-          path: dist
-          merge-multiple: true
-
-      - name: Publish artifacts to GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.release.outputs.tag }}
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          if gh release view "${TAG}" > /dev/null 2>&1; then
-            gh release upload "${TAG}" dist/* --clobber
-          else
-            gh release create "${TAG}" dist/* --title "${TAG}" --generate-notes
-          fi
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          body_path: ${{ runner.temp }}/release-notes.md
+          fail_on_unmatched_files: true
+          files: dist/*.artifactbundle.zip

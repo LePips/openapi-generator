@@ -149,7 +149,7 @@ private extension HelperFile {
 
     static let info = HelperFile(
         .info,
-        relativePath: { _ in "Extensions/Info.swift" },
+        relativePath: { plan in "Extensions/\(plan.config.extensions.infoName).swift" },
         source: { plan in try Self.infoSource(for: plan) },
         shouldEmit: { _, _ in true }
     )
@@ -164,6 +164,7 @@ private extension HelperFile {
 private extension HelperFile {
     static func infoSource(for plan: GenerationPlan) throws -> String {
         let info = plan.document.info
+        let typeName = plan.config.extensions.infoName
 
         var properties = [
             "public let title: String",
@@ -180,12 +181,12 @@ private extension HelperFile {
         }
 
         if let contact = info.contact {
-            properties.append("public let contact: Contact = \(contactExpression(contact))")
+            properties.append("public let contact: Contact = \(contactExpression(contact, typeName: typeName))")
             nestedTypes.append(contactType(for: contact))
         }
 
         if let license = info.license {
-            properties.append("public let license: License = \(licenseExpression(license))")
+            properties.append("public let license: License = \(licenseExpression(license, typeName: typeName))")
             nestedTypes.append(licenseType(for: license))
         }
 
@@ -195,7 +196,7 @@ private extension HelperFile {
         return """
         import Foundation
 
-        public struct Info: Sendable {
+        public struct \(typeName): Sendable {
         \(properties.joined(separator: "\n").indented(count: 1))
 
         \(nestedTypes.joined(separator: "\n\n").indented(count: 1))
@@ -203,21 +204,21 @@ private extension HelperFile {
         """
     }
 
-    static func contactExpression(_ contact: OpenAPI.Document.Info.Contact) -> String {
+    static func contactExpression(_ contact: OpenAPI.Document.Info.Contact, typeName: String) -> String {
         let arguments = [
             contact.name.map { "name: \($0.swiftStringLiteral)" },
             contact.url.map { "url: \(urlExpression($0))" },
             contact.email.map { "email: \($0.swiftStringLiteral)" },
         ].compactMap(\.self)
-        return "Info.Contact(\(arguments.joined(separator: ", ")))"
+        return "\(typeName).Contact(\(arguments.joined(separator: ", ")))"
     }
 
-    static func licenseExpression(_ license: OpenAPI.Document.Info.License) -> String {
+    static func licenseExpression(_ license: OpenAPI.Document.Info.License, typeName: String) -> String {
         var arguments = ["name: \(license.name.swiftStringLiteral)"]
         if let url = license.url {
             arguments.append("url: \(urlExpression(url))")
         }
-        return "Info.License(\(arguments.joined(separator: ", ")))"
+        return "\(typeName).License(\(arguments.joined(separator: ", ")))"
     }
 
     static func contactType(for contact: OpenAPI.Document.Info.Contact) -> String {
