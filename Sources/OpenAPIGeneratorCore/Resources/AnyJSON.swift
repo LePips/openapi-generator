@@ -1,6 +1,6 @@
 import Foundation
 
-public enum AnyJSON: Equatable, Codable {
+public enum AnyJSON: Hashable, Codable {
     case string(String)
     case number(Double)
     case object([String: AnyJSON])
