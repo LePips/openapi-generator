@@ -3,7 +3,7 @@ import OpenAPIKit30
 
 struct StoredDecl {
     let declaration: SwiftDecl
-    let fingerprint: String
+    var fingerprint: String?
     var sources: Set<String>
     var emit: Bool
 }
@@ -12,12 +12,14 @@ final class DeclStore {
     private var entries: [TypeName: StoredDecl] = [:]
 
     func register(_ declaration: SwiftDecl, source: String, emit: Bool) throws -> StoredDecl {
-        let fingerprint = declaration.structuralFingerprint
         if var existing = entries[declaration.name] {
-            guard existing.fingerprint == fingerprint else {
+            let existingFingerprint = existing.fingerprint ?? existing.declaration.structuralFingerprint
+            let fingerprint = declaration.structuralFingerprint
+            guard existingFingerprint == fingerprint else {
                 let sources = (existing.sources.union([source])).sorted().joined(separator: ", ")
                 throw GeneratorError("Generated type '\(declaration.name.rawValue)' has multiple incompatible shapes: \(sources).")
             }
+            existing.fingerprint = existingFingerprint
             existing.sources.insert(source)
             existing.emit = existing.emit || emit
             entries[declaration.name] = existing
@@ -26,7 +28,7 @@ final class DeclStore {
 
         let entry = StoredDecl(
             declaration: declaration,
-            fingerprint: fingerprint,
+            fingerprint: nil,
             sources: [source],
             emit: emit
         )
@@ -172,10 +174,6 @@ struct Property {
     var nested: SwiftDecl?
     var isInlined: Bool?
     var isIndirect = false
-
-    static func == (lhs: Property, rhs: Property) -> Bool {
-        lhs.name == rhs.name && lhs.type == rhs.type
-    }
 }
 
 struct StringEnumDecl: SwiftDecl {
@@ -194,6 +192,7 @@ final class EntityDecl: SwiftDecl {
     let kind: EntityKind
     let metadata: DeclarationMetadata
     let isForm: Bool
+    fileprivate var structuralFingerprintCache: String?
     var protocols: [String] = []
     var properties: [Property] = []
     var discriminator: Discriminator?
@@ -336,13 +335,16 @@ private extension SwiftDecl {
 
 private extension EntityDecl {
     var structuralFingerprint: String {
+        if let structuralFingerprintCache {
+            return structuralFingerprintCache
+        }
         let properties = properties
             .map(\.structuralFingerprint)
             .joined(separator: ";")
         let discriminator = discriminator
             .map { "\($0.propertyName)|\($0.mapping.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: ","))" } ??
             ""
-        return [
+        let fingerprint = [
             "entity",
             name.rawValue,
             "\(kind)",
@@ -352,6 +354,8 @@ private extension EntityDecl {
             "properties:\(properties)",
             "discriminator:\(discriminator)",
         ].joined(separator: "|")
+        structuralFingerprintCache = fingerprint
+        return fingerprint
     }
 }
 

@@ -34,6 +34,34 @@ struct SnapshotTests {
     }
 
     @Test
+    func `inline nested type collisions`() throws {
+        var config = Configuration()
+        config.entities.codingStrategy = .codingKeys
+        config.extensions.emit = []
+        config.generate = [.entities]
+
+        try DirectorySnapshot.assert(
+            named: "inline-nested-type-collisions",
+            spec: "inline-collisions.yaml",
+            config: config
+        )
+    }
+
+    @Test
+    func `discriminator type property`() throws {
+        var config = Configuration()
+        config.extensions.emit = []
+        config.generate = [.entities]
+
+        try DirectorySnapshot.assert(
+            named: "discriminator-type-property",
+            spec: "discriminator-type.yaml",
+            config: config,
+            fileFilter: ["Entities/Payload.swift"]
+        )
+    }
+
+    @Test
     func `petstore custom imports`() throws {
         var config = Configuration()
         config.paths.imports = ["Foundation", "Get", "HTTPHeaders", "CoreData"]

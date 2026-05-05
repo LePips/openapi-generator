@@ -44,21 +44,23 @@ extension CodeGen {
     }
 
     func typeName(for key: OpenAPI.ComponentKey) -> TypeName? {
+        if let cached = state.componentTypeNames[key.rawValue] {
+            return cached
+        }
         var rawName = key.rawValue
         if let renamed = plan.config.rename.entities[names.type(rawName).rawValue] ?? plan.config.rename.entities[rawName] {
             rawName = renamed
         }
-        return names.type(template(plan.config.entities.nameTemplate, rawName))
+        let name = names.type(template(plan.config.entities.nameTemplate, rawName))
+        state.componentTypeNames[key.rawValue] = name
+        return name
     }
 
     func shouldGenerateEntity(_ name: String) -> Bool {
         if !plan.config.entities.include.isEmpty {
             return plan.config.entities.include.contains(name)
         }
-        if !plan.config.entities.exclude.isEmpty {
-            return !plan.config.entities.exclude.contains { $0.parent == name && $0.child == nil }
-        }
-        return true
+        return !state.excludedEntities.contains(name)
     }
 
     func makeDeclaration(name: TypeName, schema: JSONSchema, context: MakeContext) throws -> SwiftDecl {
@@ -196,7 +198,7 @@ extension CodeGen {
     }
 
     func excludedProperties(for name: TypeName) -> Set<String> {
-        Set(plan.config.entities.exclude.filter { $0.parent == name.rawValue }.compactMap(\.child))
+        state.excludedPropertiesByEntity[name.rawValue] ?? []
     }
 
     func isExcludedProperty(key: String, from name: TypeName) -> Bool {
@@ -333,7 +335,8 @@ extension CodeGen {
         fallback: String,
         context: inout MakeContext
     ) throws -> (type: SwiftType, nested: SwiftDecl?) {
-        let declaration = try makeDeclaration(name: names.type(fallback), schema: schema, context: context)
+        let name = usesPromotedInlineName(for: schema) ? inlineTypeName(fallback: fallback, context: context) : names.type(fallback)
+        let declaration = try makeDeclaration(name: name, schema: schema, context: context)
         if let alias = declaration as? TypealiasDecl {
             if let nested = alias.nested, shouldPromote(nested, context: context) {
                 _ = try registerPromoted(nested, context: context, source: sourceDescription(fallback: fallback, context: context))
@@ -352,23 +355,99 @@ extension CodeGen {
 
     func referenceType(_ reference: JSONReference<JSONSchema>, context: MakeContext) throws -> SwiftType {
         guard let referenceName = reference.name else { throw GeneratorError("Reference name is missing") }
+        let canInlineTypealias = plan.config.inlineTypealiases && !context.parents.contains(where: { $0.name.rawValue == referenceName })
+        let cacheKey = ReferenceTypeCacheKey(
+            referenceName: referenceName,
+            namespace: context.namespace,
+            canInlineTypealias: canInlineTypealias
+        )
+        if let cached = state.referenceTypes[cacheKey] {
+            return cached
+        }
         if let key = OpenAPI.ComponentKey(rawValue: referenceName), plan.document.components.schemas[key] == nil {
             state.usage.usesAnyJSON = true
-            return .userDefined(TypeName("AnyJSON"))
+            let type = SwiftType.userDefined(TypeName("AnyJSON"))
+            state.referenceTypes[cacheKey] = type
+            return type
         }
-        if plan.config.inlineTypealiases,
-           !context.parents.contains(where: { $0.name.rawValue == referenceName }),
+        if canInlineTypealias,
            let key = OpenAPI.ComponentKey(rawValue: referenceName),
            let schema = plan.document.components.schemas[key]
         {
-            let declaration = try makeDeclaration(name: names.type(referenceName), schema: schema, context: context)
-            if let alias = declaration as? TypealiasDecl {
-                return alias.type.namespace(context.namespace)
+            if let inlineType = try inlineTypealiasType(name: names.type(referenceName), schema: schema, context: context) {
+                let type = inlineType.namespace(context.namespace)
+                state.referenceTypes[cacheKey] = type
+                return type
             }
         }
         let renamed = plan.config.rename.entities[referenceName] ?? referenceName
         let templated = template(plan.config.entities.nameTemplate, renamed)
-        return .userDefined(names.type(templated).namespace(context.namespace))
+        let type = SwiftType.userDefined(names.type(templated).namespace(context.namespace))
+        state.referenceTypes[cacheKey] = type
+        return type
+    }
+
+    func inlineTypealiasType(name: TypeName, schema: JSONSchema, context: MakeContext) throws -> SwiftType? {
+        switch schema.value {
+        case .boolean:
+            return .builtin("Bool")
+        case let .number(info, _):
+            return numberType(for: info.format)
+        case let .integer(info, _):
+            return integerType(for: info.format)
+        case let .string(info, _):
+            if plan.config.entities.stringEnums, info.allowedValues != nil {
+                return nil
+            }
+            return stringType(for: info.format)
+        case let .array(_, details):
+            guard let item = details.items else { throw GeneratorError("Missing array item type") }
+            let itemName = names.type(singularized(name.rawValue))
+            if let itemType = try inlineTypealiasType(name: itemName, schema: item, context: context) {
+                return .array(itemType)
+            }
+            return .array(.userDefined(itemName))
+        case let .all(schemas, _) where schemas.count == 1:
+            return try inlineTypealiasType(name: name, schema: schemas[0], context: context)
+        case let .one(schemas, _) where schemas.count == 1:
+            return try inlineTypealiasType(name: name, schema: schemas[0], context: context)
+        case let .any(schemas, _) where schemas.count == 1:
+            return try inlineTypealiasType(name: name, schema: schemas[0], context: context)
+        case .all, .one, .any:
+            return nil
+        case let .reference(reference, _):
+            return try referenceType(reference, context: context)
+        case .fragment:
+            state.usage.usesAnyJSON = true
+            return .userDefined(TypeName("AnyJSON"))
+        case let .object(_, details):
+            return try inlineDictionaryType(name: name, details: details, context: context)
+        case .not:
+            throw GeneratorError("Unsupported schema 'not' for \(name.rawValue)")
+        }
+    }
+
+    func inlineDictionaryType(
+        name: TypeName,
+        details: JSONSchema.ObjectContext,
+        context: MakeContext
+    ) throws -> SwiftType? {
+        let additionalProperties = details.additionalProperties ?? .a(true)
+        switch additionalProperties {
+        case let .a(allowed):
+            if !allowed, details.properties.isEmpty {
+                return .builtin("Void")
+            }
+            guard details.properties.isEmpty else { return nil }
+            state.usage.usesAnyJSON = true
+            return .dictionary(value: .userDefined(TypeName("AnyJSON")))
+        case let .b(schema):
+            let nestedName = names.type(singularized(name.rawValue))
+            if let valueType = try inlineTypealiasType(name: nestedName, schema: schema, context: context) {
+                return .dictionary(value: valueType)
+            }
+            return .dictionary(value: .userDefined(nestedName))
+        }
     }
 
     func referencedSchema(for reference: JSONReference<JSONSchema>) -> JSONSchema? {
@@ -405,22 +484,26 @@ extension CodeGen {
 
     func discriminator(info: JSONSchemaContext, context: MakeContext) throws -> Discriminator? {
         try info.discriminator.flatMap { discriminator in
-            let mappings = try discriminator.mapping?.mapValues { value -> SwiftType in
-                let reference: JSONReference<JSONSchema>
-                if value.hasPrefix("#") {
-                    reference = .internal(.path(.init(rawValue: value)))
-                } else if let url = URL(string: value) {
-                    reference = .external(url)
-                } else {
-                    throw GeneratorError("Expected mapping value '\(value)' to be a valid reference")
-                }
-                return try referenceType(reference, context: context)
-            } ?? [:]
+            var mappings: [String: SwiftType] = [:]
+            mappings.reserveCapacity(discriminator.mapping?.count ?? 0)
+            for (key, value) in discriminator.mapping ?? [:] {
+                mappings[key] = try referenceType(discriminatorReference(value), context: context)
+            }
             return Discriminator(
                 propertyName: discriminator.propertyName,
-                mapping: Dictionary(uniqueKeysWithValues: mappings.map { ($0.key, $0.value) })
+                mapping: mappings
             )
         }
+    }
+
+    func discriminatorReference(_ value: String) throws -> JSONReference<JSONSchema> {
+        if value.hasPrefix("#") {
+            return .internal(.path(.init(rawValue: value)))
+        }
+        if let url = URL(string: value) {
+            return .external(url)
+        }
+        throw GeneratorError("Expected mapping value '\(value)' to be a valid reference")
     }
 
     func protocols(for entity: EntityDecl, context _: MakeContext) -> [String] {

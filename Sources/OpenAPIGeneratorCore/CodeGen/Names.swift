@@ -1,14 +1,32 @@
 import Foundation
 
-struct NameResolver {
+final class NameResolver {
     let config: Configuration
+    private let processor: NameProcessor
+    private var types: [String: TypeName] = [:]
+    private var properties: [String: PropertyName] = [:]
+
+    init(config: Configuration) {
+        self.config = config
+        processor = NameProcessor(acronyms: config.acronyms)
+    }
 
     func type(_ rawValue: String) -> TypeName {
-        TypeName(rawValue.process(isProperty: false, acronyms: config.acronyms))
+        if let cached = types[rawValue] {
+            return cached
+        }
+        let value = TypeName(processor.process(rawValue, isProperty: false))
+        types[rawValue] = value
+        return value
     }
 
     func property(_ rawValue: String) -> PropertyName {
-        PropertyName(rawValue.process(isProperty: true, acronyms: config.acronyms))
+        if let cached = properties[rawValue] {
+            return cached
+        }
+        let value = PropertyName(processor.process(rawValue, isProperty: true))
+        properties[rawValue] = value
+        return value
     }
 }
 

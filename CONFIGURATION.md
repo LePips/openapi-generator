@@ -333,6 +333,9 @@ Controls how deprecated schemas, properties, and operations are marked.
 - `none` emits no deprecation marker.
 - `remove` skips deprecated schemas, properties, and operations.
 
+> [!CAUTION]
+> Removing values may cause compilation or API breakage. Ensure that removing deprecated values is okay with your API.
+
 <details>
 <summary>Example</summary>
 

@@ -1,0 +1,47 @@
+openapi: 3.0.0
+info:
+  title: Inline Collisions
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    CatalogItem:
+      type: object
+      properties:
+        id:
+          type: string
+        attributes:
+          type: object
+          properties:
+            displayName:
+              type: string
+            resourceUrl:
+              type: string
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              size:
+                type: integer
+              digest:
+                type: string
+    CatalogItemGroup:
+      type: object
+      properties:
+        id:
+          type: string
+        attributes:
+          type: object
+          properties:
+            groupKind:
+              type: string
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              region:
+                type: string
+              position:
+                type: integer

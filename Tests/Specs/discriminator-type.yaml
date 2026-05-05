@@ -1,0 +1,38 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Discriminator Type
+
+paths: {}
+
+components:
+  schemas:
+    Cat:
+      type: object
+      required:
+        - Type
+        - meows
+      properties:
+        Type:
+          type: string
+        meows:
+          type: boolean
+    Dog:
+      type: object
+      required:
+        - Type
+        - barks
+      properties:
+        Type:
+          type: string
+        barks:
+          type: boolean
+    Payload:
+      oneOf:
+        - $ref: "#/components/schemas/Cat"
+        - $ref: "#/components/schemas/Dog"
+      discriminator:
+        propertyName: Type
+        mapping:
+          cat: "#/components/schemas/Cat"
+          dog: "#/components/schemas/Dog"

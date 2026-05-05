@@ -61,6 +61,10 @@ extension String {
     }
 
     func process(isProperty: Bool, acronyms: [String]) -> String {
+        NameProcessor(acronyms: acronyms).process(self, isProperty: isProperty)
+    }
+
+    fileprivate func process(isProperty: Bool, processor: NameProcessor) -> String {
         var components = sanitized.replacingOccurrences(of: "'", with: "")
             .components(separatedBy: badCharacters)
         if !components.contains(where: { $0.count > 1 && $0.contains(where: \.isLowercase) }) {
@@ -73,17 +77,20 @@ extension String {
             return string.capitalizingFirstLetter()
         }.joined()
         guard let first = output.first else { return output }
-        if !CharacterSet(charactersIn: String(first)).isSubset(of: .letters) {
+        if !first.isLetter {
             output = (isProperty ? "_" : "__") + output
         }
-        for acronym in acronyms {
-            if let range = output.range(of: acronym.capitalizingFirstLetter()),
+        for acronym in processor.acronyms {
+            if let range = output.range(of: acronym.capitalized),
                range.upperBound == output.endIndex || output[range.upperBound].isUppercase || output[range.upperBound] == "s"
             {
-                output.replaceSubrange(range, with: acronym.uppercased())
+                output.replaceSubrange(range, with: acronym.uppercased)
             }
-            if isProperty, let range = output.lowercased().range(of: acronym), range.lowerBound == output.startIndex {
-                output.replaceSubrange(range, with: acronym)
+            if isProperty, output.lowercased().hasPrefix(acronym.rawValue) {
+                output.replaceSubrange(
+                    output.startIndex ..< output.index(output.startIndex, offsetBy: acronym.rawValue.count),
+                    with: acronym.rawValue
+                )
             }
         }
         if output == "self" {
@@ -117,6 +124,30 @@ extension String {
 
     var escapedTypeName: String {
         capitalizedKeywords.contains(self) ? "`\(self)`" : self
+    }
+}
+
+struct NameProcessor {
+    struct Acronym {
+        let rawValue: String
+        let capitalized: String
+        let uppercased: String
+    }
+
+    let acronyms: [Acronym]
+
+    init(acronyms: [String]) {
+        self.acronyms = acronyms.map { acronym in
+            Acronym(
+                rawValue: acronym,
+                capitalized: acronym.capitalizingFirstLetter(),
+                uppercased: acronym.uppercased()
+            )
+        }
+    }
+
+    func process(_ rawValue: String, isProperty: Bool) -> String {
+        rawValue.process(isProperty: isProperty, processor: self)
     }
 }
 

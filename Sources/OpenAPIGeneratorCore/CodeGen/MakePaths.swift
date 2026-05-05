@@ -193,7 +193,9 @@ extension CodeGen {
         context.isFormEncoding = true
         let type = try queryType(parameterName: parameter.name, schema: schema, context: context)
         guard !type.type.isVoid else { return nil }
-        var propertyName = names.property(plan.config.rename.parameters[names.property(parameter.name).rawValue] ?? parameter.name)
+        let generatedParameterName = names.property(parameter.name).rawValue
+        let renamedParameterName = plan.config.rename.parameters[generatedParameterName] ?? parameter.name
+        var propertyName = names.property(renamedParameterName)
         if type.type.isBool, plan.config.useSwiftyPropertyNames {
             propertyName = propertyName.asBoolean(acronyms: plan.config.acronyms)
         }
@@ -289,6 +291,7 @@ extension CodeGen {
             return BodyUse(type: .builtin("Void"), nested: nil, isOptional: false)
         }
 
+        let contentByTypeAndSubtype = contentByTypeAndSubtype(content)
         for key in content.keys {
             if let override = plan.config.paths.bodyTypeOverrides[key.rawValue] {
                 return BodyUse(type: .userDefined(TypeName(override)), nested: nil, isOptional: false)
@@ -296,7 +299,7 @@ extension CodeGen {
         }
 
         if let content = firstContent(
-            in: content,
+            in: contentByTypeAndSubtype,
             matching: [
                 .json,
                 .jsonapi,
@@ -326,7 +329,7 @@ extension CodeGen {
             }
         }
         if firstContent(
-            in: content,
+            in: contentByTypeAndSubtype,
             matching: [
                 .css,
                 .csv,
@@ -346,10 +349,18 @@ extension CodeGen {
         return BodyUse(type: .builtin("Data"), nested: nil, isOptional: false)
     }
 
-    func firstContent(in map: OpenAPI.Content.Map, matching keys: [OpenAPI.ContentType]) -> OpenAPI.Content? {
+    func contentByTypeAndSubtype(_ map: OpenAPI.Content.Map) -> [String: OpenAPI.Content] {
+        var output: [String: OpenAPI.Content] = [:]
+        for (key, value) in map where output[key.typeAndSubtype] == nil {
+            output[key.typeAndSubtype] = value
+        }
+        return output
+    }
+
+    func firstContent(in map: [String: OpenAPI.Content], matching keys: [OpenAPI.ContentType]) -> OpenAPI.Content? {
         for key in keys {
-            if let content = map.first(where: { $0.key.typeAndSubtype == key.typeAndSubtype }) {
-                return content.value
+            if let content = map[key.typeAndSubtype] {
+                return content
             }
         }
         return nil
