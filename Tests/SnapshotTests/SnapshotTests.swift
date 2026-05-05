@@ -139,6 +139,36 @@ struct SnapshotTests {
     }
 
     @Test
+    func `config deprecation remove properties`() throws {
+        var config = Configuration()
+        config.comments.annotateDeprecations = .remove
+        config.extensions.emit = []
+        config.generate = [.entities]
+
+        try DirectorySnapshot.assert(
+            named: "config-deprecation-remove-properties",
+            spec: "config-deprecation-remove.yaml",
+            config: config,
+            fileFilter: ["Entities/Widget.swift"]
+        )
+    }
+
+    @Test
+    func `config deprecation remove entities`() throws {
+        var config = Configuration()
+        config.comments.annotateDeprecations = .remove
+        config.extensions.emit = []
+        config.generate = [.entities]
+
+        try DirectorySnapshot.assert(
+            named: "config-deprecation-remove-entities",
+            spec: "config-deprecation-remove.yaml",
+            config: config,
+            fileFilter: ["Entities/Widget.swift", "Entities/DeprecatedWidget.swift"]
+        )
+    }
+
+    @Test
     func `config deprecation remove entities and properties`() throws {
         var config = Configuration()
         config.comments.annotateDeprecations = .remove

@@ -59,7 +59,7 @@ extension CodeGen {
         }
     }
 
-    func comments(for metadata: DeclarationMetadata, name: String, isProperty: Bool = false) -> String {
+    func comments(for metadata: DeclarationMetadata, name: String) -> String {
         guard plan.config.commentsEnabled else { return "" }
         var output = ""
         var title = metadata.title ?? ""

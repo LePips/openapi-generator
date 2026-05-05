@@ -5,13 +5,19 @@
 import Foundation
 
 public struct Info: Sendable {
-    public let title: String
-    public let description: String = """
-    An API to facilitate the hiring process for mobile teams at Cookpad Global.
+    public var title: String {
+        "Global Mobile Hiring"
+    }
+    public var description: String {
+        """
+        An API to facilitate the hiring process for mobile teams at Cookpad Global.
 
-    Want to apply? Visit [cookpadteam.com/careers](https://www.cookpadteam.com/careers) for more.
-    """
-    public let version: Version
+        Want to apply? Visit [cookpadteam.com/careers](https://www.cookpadteam.com/careers) for more.
+        """
+    }
+    public var version: Version {
+        "1.0.0"
+    }
 
     public struct Version: Comparable, CustomStringConvertible, ExpressibleByStringLiteral, Sendable {
         public let major: Int

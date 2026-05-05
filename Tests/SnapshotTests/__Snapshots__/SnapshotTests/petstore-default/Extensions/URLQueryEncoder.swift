@@ -174,7 +174,7 @@ private extension URLQueryEncoder {
 
     func encode(_ value: Date, forKey codingPath: [CodingKey]) throws {
         let string: String = switch dateEncodingStrategy {
-        case .iso8601: iso8601Formatter.string(from: value)
+        case .iso8601: ISO8601DateFormatter().string(from: value)
         case .secondsSince1970: String(value.timeIntervalSince1970)
         case .millisecondsSince1970: String(Int(value.timeIntervalSince1970 * 1000))
         case let .formatted(formatter): formatter.string(from: value)
@@ -344,5 +344,3 @@ private struct SingleValueContanier: SingleValueEncodingContainer {
         try encoder.encodeEncodable(value, forKey: codingPath)
     }
 }
-
-private nonisolated(unsafe) let iso8601Formatter = ISO8601DateFormatter()

@@ -5,8 +5,12 @@
 import Foundation
 
 public struct Info: Sendable {
-    public let title: String
-    public let version: Version
+    public var title: String {
+        "Config Helper Options"
+    }
+    public var version: Version {
+        "8.6.4"
+    }
 
     public struct Version: Comparable, CustomStringConvertible, ExpressibleByStringLiteral, Sendable {
         public let major: Int

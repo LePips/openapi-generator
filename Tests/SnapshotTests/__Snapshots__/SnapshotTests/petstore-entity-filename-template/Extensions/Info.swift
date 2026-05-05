@@ -5,9 +5,15 @@
 import Foundation
 
 public struct Info: Sendable {
-    public let title: String
-    public let license: License = Info.License(name: "MIT")
-    public let version: Version
+    public var title: String {
+        "Swagger Petstore"
+    }
+    public var license: License {
+        Info.License(name: "MIT")
+    }
+    public var version: Version {
+        "1.0.0"
+    }
 
     public struct Version: Comparable, CustomStringConvertible, ExpressibleByStringLiteral, Sendable {
         public let major: Int

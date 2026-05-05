@@ -103,7 +103,7 @@ extension CodeGen {
     func renderProperty(_ property: Property, isReadOnly: Bool) -> String {
         let optional = property.isOptional && property.defaultValue == nil ? "?" : ""
         let wrapper = property.isIndirect ? "@Indirect\n" : ""
-        let commentBlock = property.metadata.map { comments(for: $0, name: property.name.rawValue, isProperty: true) } ?? ""
+        let commentBlock = property.metadata.map { comments(for: $0, name: property.name.rawValue) } ?? ""
         return commentBlock + "\(wrapper)\(access)\(isReadOnly ? "let" : "var") \(property.name.rawValue): \(property.type)\(optional)"
     }
 

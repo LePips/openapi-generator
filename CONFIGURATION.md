@@ -35,6 +35,7 @@ Configuration files may be written as YAML or JSON and passed with `--config` or
   - [`stringEnums`](#entitiesstringenums)
 - [`extensions`](#extensions)
   - [`emit`](#extensionsemit)
+  - [`infoName`](#extensionsinfoname)
 - [`fileHeader`](#fileheader)
 - [`generate`](#generate)
 - [`inlineTypealiases`](#inlinetypealiases)

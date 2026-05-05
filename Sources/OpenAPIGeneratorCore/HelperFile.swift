@@ -167,30 +167,38 @@ private extension HelperFile {
         let typeName = plan.config.extensions.infoName
 
         var properties = [
-            "public let title: String",
+            computedProperty(name: "title", type: "String", expression: info.title.swiftStringLiteral),
         ]
 
         var nestedTypes: [String] = []
 
         if let description = info.description {
-            properties.append("public let description: String = \(description.swiftStringLiteral)")
+            properties.append(computedProperty(name: "description", type: "String", expression: description.swiftStringLiteral))
         }
 
         if let termsOfService = info.termsOfService {
-            properties.append("public let termsOfService: URL = \(termsOfService)")
+            properties.append(computedProperty(name: "termsOfService", type: "URL", expression: urlExpression(termsOfService)))
         }
 
         if let contact = info.contact {
-            properties.append("public let contact: Contact = \(contactExpression(contact, typeName: typeName))")
+            properties.append(computedProperty(
+                name: "contact",
+                type: "Contact",
+                expression: contactExpression(contact, typeName: typeName)
+            ))
             nestedTypes.append(contactType(for: contact))
         }
 
         if let license = info.license {
-            properties.append("public let license: License = \(licenseExpression(license, typeName: typeName))")
+            properties.append(computedProperty(
+                name: "license",
+                type: "License",
+                expression: licenseExpression(license, typeName: typeName)
+            ))
             nestedTypes.append(licenseType(for: license))
         }
 
-        properties.append("public let version: Version")
+        properties.append(computedProperty(name: "version", type: "Version", expression: info.version.swiftStringLiteral))
         try nestedTypes.insert(template(named: "Version").trimmedForSource, at: 0)
 
         return """
@@ -200,6 +208,14 @@ private extension HelperFile {
         \(properties.joined(separator: "\n").indented(count: 1))
 
         \(nestedTypes.joined(separator: "\n\n").indented(count: 1))
+        }
+        """
+    }
+
+    static func computedProperty(name: String, type: String, expression: String) -> String {
+        """
+        public var \(name): \(type) {
+        \(expression.indented)
         }
         """
     }

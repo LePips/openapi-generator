@@ -5,12 +5,24 @@
 import Foundation
 
 public struct Info: Sendable {
-    public let title: String
-    public let description: String = "Full info fixture"
-    public let termsOfService: URL = https://example.com/terms
-    public let contact: Contact = Info.Contact(name: "API Support", url: URL(string: "https://example.com/support")!, email: "support@example.com")
-    public let license: License = Info.License(name: "Example License", url: URL(string: "https://example.com/license")!)
-    public let version: Version
+    public var title: String {
+        "Config Info Options"
+    }
+    public var description: String {
+        "Full info fixture"
+    }
+    public var termsOfService: URL {
+        URL(string: "https://example.com/terms")!
+    }
+    public var contact: Contact {
+        Info.Contact(name: "API Support", url: URL(string: "https://example.com/support")!, email: "support@example.com")
+    }
+    public var license: License {
+        Info.License(name: "Example License", url: URL(string: "https://example.com/license")!)
+    }
+    public var version: Version {
+        "9.8.7"
+    }
 
     public struct Version: Comparable, CustomStringConvertible, ExpressibleByStringLiteral, Sendable {
         public let major: Int
