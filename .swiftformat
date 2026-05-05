@@ -2,7 +2,8 @@
 
 --swiftversion 6.2
 
---exclude **/__Snapshots__/**
+--exclude **/__Snapshots__/**, \
+    Sources/OpenAPIGeneratorCore
 
 --assetliterals visual-width
 --computedvarattrs prev-line

@@ -4,15 +4,6 @@ import PackagePlugin
 @main
 struct OpenAPIGeneratorPlugin: CommandPlugin {
     func performCommand(context: PluginContext, arguments: [String]) async throws {
-        var arguments = arguments
-
-        if arguments.isEmpty || arguments.contains("--help") || arguments.contains("-h") {
-            print("""
-            Usage:
-              swift package plugin --allow-writing-to-package-directory generate-openapi <input> [--config <config>] [--output <output>]
-            """)
-            return
-        }
 
         let tool = try context.tool(named: "GeneratorExecutable")
 

@@ -254,7 +254,8 @@ public struct Entities: Decodable, Sendable {
         memberwiseInit = try container.decodeIfPresent(Bool.self, forKey: .memberwiseInit) ?? memberwiseInit
         mutableProperties = try container.decodeIfPresent(Set<MutableProperties>.self, forKey: .mutableProperties) ?? mutableProperties
         nameTemplate = try container.decodeIfPresent(String.self, forKey: .nameTemplate) ?? nameTemplate
-        propertyTypeOverrides = try container.decodeIfPresent([String: String].self, forKey: .propertyTypeOverrides) ?? propertyTypeOverrides
+        propertyTypeOverrides = try container
+            .decodeIfPresent([String: String].self, forKey: .propertyTypeOverrides) ?? propertyTypeOverrides
         sortProperties = try container.decodeIfPresent(Bool.self, forKey: .sortProperties) ?? sortProperties
         stringEnums = try container.decodeIfPresent(Bool.self, forKey: .stringEnums) ?? stringEnums
     }

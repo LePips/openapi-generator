@@ -23,7 +23,7 @@ Add to your package:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/LePips/openapi-generator.git", branch: "main"),
+    .package(url: "https://github.com/LePips/openapi-generator.git", from: "0.1.0"),
 ]
 ```
 
@@ -62,7 +62,7 @@ paths:
 Run the plugin from your package:
 
 ```sh
-swift package plugin --allow-writing-to-package-directory generate-openapi \
+swift package plugin --allow-writing-to-package-directory openapi-generator \
   ./openapi.json \
   --config openapi-generator.yml \
   --output Sources/MyAPI/Generated

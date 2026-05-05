@@ -44,7 +44,7 @@ let package = Package(
             name: "OpenAPIGeneratorPlugin",
             capability: .command(
                 intent: .custom(
-                    verb: "generate-openapi",
+                    verb: "openapi-generator",
                     description: "Generate Swift sources from an OpenAPI document."
                 ),
                 permissions: [
