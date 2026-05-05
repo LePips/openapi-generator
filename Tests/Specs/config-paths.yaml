@@ -1,0 +1,62 @@
+openapi: 3.0.0
+info:
+  title: Config Path Options
+  version: 3.5.7
+paths:
+  /widgets/{widgetId}:
+    post:
+      operationId: createWidget
+      parameters:
+        - name: widgetId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: search
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+        - name: expand
+          in: query
+          required: false
+          schema:
+            type: boolean
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/WidgetResponse"
+  /ignored:
+    get:
+      operationId: ignored
+      responses:
+        "204":
+          description: Empty response
+components:
+  responses:
+    WidgetResponse:
+      description: Widget response
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              value:
+                type: string

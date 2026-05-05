@@ -1,0 +1,38 @@
+openapi: 3.0.0
+info:
+  title: Config Deprecation Remove Options
+  version: 1.0.0
+paths:
+  /legacy:
+    get:
+      operationId: getLegacyItem
+      summary: Get legacy item
+      deprecated: true
+      responses:
+        "204":
+          description: Empty response
+  /modern:
+    get:
+      operationId: getModernItem
+      summary: Get modern item
+      responses:
+        "204":
+          description: Empty response
+components:
+  schemas:
+    DeprecatedWidget:
+      deprecated: true
+      type: object
+      properties:
+        value:
+          type: string
+    Widget:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        legacyValue:
+          deprecated: true
+          type: string

@@ -1,0 +1,51 @@
+openapi: 3.0.0
+info:
+  title: Config Entity Options
+  version: 2.4.6
+paths: {}
+components:
+  schemas:
+    Widget:
+      title: Widget model
+      description: entity config fixture
+      deprecated: true
+      type: object
+      required:
+        - id
+        - status
+        - zeta
+      properties:
+        zeta:
+          type: string
+        active:
+          type: boolean
+          default: true
+          deprecated: true
+        id:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum:
+            - ready
+            - not-ready
+        metadata:
+          type: object
+          additionalProperties: true
+        count:
+          type: integer
+          format: int32
+        ratio:
+          type: number
+          format: float
+        link:
+          type: string
+          format: uri
+        created:
+          type: string
+          format: date-time
+    Ignored:
+      type: object
+      properties:
+        value:
+          type: string

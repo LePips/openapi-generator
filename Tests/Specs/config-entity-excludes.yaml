@@ -1,0 +1,22 @@
+openapi: 3.0.0
+info:
+  title: Config Entity Exclude Options
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    Widget:
+      type: object
+      required:
+        - CurrentProgram
+        - OtherValue
+      properties:
+        CurrentProgram:
+          type: string
+        OtherValue:
+          type: string
+    Ignored:
+      type: object
+      properties:
+        value:
+          type: string

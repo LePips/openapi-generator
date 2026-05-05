@@ -1,0 +1,14 @@
+openapi: 3.0.0
+info:
+  title: Config Deprecated Path Options
+  version: 1.0.0
+paths:
+  /legacy:
+    get:
+      operationId: getLegacyItem
+      summary: Get legacy item
+      description: Use the replacement endpoint instead.
+      deprecated: true
+      responses:
+        "204":
+          description: Empty response
