@@ -56,17 +56,13 @@ let package = Package(
             path: "Plugins/OpenAPIGeneratorPlugin"
         ),
         .testTarget(
-            name: "SnapshotTests",
+            name: "Tests",
             dependencies: [
                 "OpenAPIGeneratorCore",
                 .product(name: "SnapshotTesting", package: "swift-snapshot-testing"),
             ],
-            path: "Tests",
             exclude: [
                 "SnapshotTests/__Snapshots__",
-            ],
-            sources: [
-                "SnapshotTests",
             ],
             resources: [
                 .copy("Specs"),

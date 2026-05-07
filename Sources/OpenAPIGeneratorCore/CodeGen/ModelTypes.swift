@@ -50,7 +50,7 @@ struct PropertyName: Hashable, CustomStringConvertible {
             string.removeFirst(first.count)
             string = first.uppercased() + string
         }
-        return PropertyName("is" + string.capitalized)
+        return PropertyName("is" + string.capitalizingFirstLetter())
     }
 }
 
