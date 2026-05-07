@@ -29,9 +29,7 @@ dependencies: [
 
 ## Configure
 
-Customize generation with a configuration file with many available options.
-
-See [CONFIGURATION](CONFIGURATION.md) for all options.
+Create `openapi-generator.yml`. See [CONFIGURATION](CONFIGURATION.md) for all options.
 
 ```yaml
 module: MyAPI
@@ -67,5 +65,7 @@ swift package plugin --allow-writing-to-package-directory openapi-generator \
   --config openapi-generator.yml \
   --output Sources/MyAPI/Generated
 ```
+
+Or use the [binary from the latest release.](https://github.com/LePips/openapi-generator/releases/latest)
 
 Generated `Paths` use [`Get`](https://github.com/kean/Get) by default, so add it to your runtime target if you generate paths.

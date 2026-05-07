@@ -21,43 +21,14 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v6
 
-      - name: Build release binary
-        run: swift build --disable-sandbox -c release --product "${PRODUCT_NAME}" --arch arm64
-
-      - name: Prepare artifact bundle
+      - name: Build artifact bundle
         shell: bash
         run: |
           set -euo pipefail
 
           version="${GITHUB_REF_NAME#v}"
-          bundle_path="dist/${ARTIFACT_BUNDLE_NAME}"
-          variant_path="${PRODUCT_NAME}-macos-arm64/bin"
-
-          mkdir -p "${bundle_path}/${variant_path}"
-          cp ".build/release/${PRODUCT_NAME}" "${bundle_path}/${variant_path}/${PRODUCT_NAME}"
-          strip "${bundle_path}/${variant_path}/${PRODUCT_NAME}" || true
-
-          cat > "${bundle_path}/info.json" <<EOF
-          {
-            "schemaVersion": "1.0",
-            "artifacts": {
-              "${PRODUCT_NAME}": {
-                "type": "executable",
-                "version": "${version}",
-                "variants": [
-                  {
-                    "path": "${variant_path}/${PRODUCT_NAME}",
-                    "supportedTriples": ["arm64-apple-macosx"]
-                  }
-                ]
-              }
-            }
-          }
-          EOF
-
-      - name: Zip artifact bundle
-        working-directory: dist
-        run: 7z a -tzip "${ARTIFACT_BUNDLE_NAME}.zip" "${ARTIFACT_BUNDLE_NAME}"
+          OPENAPI_GENERATOR_ARTIFACT_OUTPUT_ROOT="$PWD/dist" \
+          Scripts/artifactbundle.sh "${version}"
 
       - name: Generate release notes
         shell: bash

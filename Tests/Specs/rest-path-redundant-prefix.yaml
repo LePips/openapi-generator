@@ -1,0 +1,17 @@
+openapi: 3.0.0
+info:
+  title: REST Path Redundant Prefix
+  version: 1.0.0
+paths:
+  /api/v1/users:
+    get:
+      operationId: listUsers
+      responses:
+        "204":
+          description: Empty response
+  /api/v1/teams:
+    get:
+      operationId: listTeams
+      responses:
+        "204":
+          description: Empty response

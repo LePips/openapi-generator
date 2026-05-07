@@ -123,6 +123,173 @@ struct SnapshotTests {
     }
 
     @Test
+    func `petstore explicit operations paths style`() throws {
+        var config = Configuration()
+        config.paths.style = .operations
+
+        try DirectorySnapshot.assert(
+            named: "petstore-explicit-operations-paths-style",
+            spec: "petstore.yaml",
+            config: config,
+            fileFilter: ["Paths/ListPets.swift"]
+        )
+    }
+
+    @Test
+    func `petstore rest paths style`() throws {
+        var config = Configuration()
+        config.paths.style = .rest
+
+        try DirectorySnapshot.assert(
+            named: "petstore-rest-paths-style",
+            spec: "petstore.yaml",
+            config: config,
+            fileFilter: [
+                "Paths/PathsPets.swift",
+                "Paths/PathsPetsWithPetID.swift",
+            ]
+        )
+    }
+
+    @Test
+    func `petstore rest paths style custom namespace`() throws {
+        var config = Configuration()
+        config.paths.namespace = "APIRoutes"
+        config.paths.style = .rest
+
+        try DirectorySnapshot.assert(
+            named: "petstore-rest-paths-style-custom-namespace",
+            spec: "petstore.yaml",
+            config: config,
+            fileFilter: [
+                "Paths/PathsPets.swift",
+                "Paths/PathsPetsWithPetID.swift",
+            ]
+        )
+    }
+
+    @Test
+    func `petstore rest paths style include leaf`() throws {
+        var config = Configuration()
+        config.extensions.emit = []
+        config.generate = [.paths]
+        config.paths.include = ["/pets/{petId}"]
+        config.paths.style = .rest
+
+        try DirectorySnapshot.assert(
+            named: "petstore-rest-paths-style-include-leaf",
+            spec: "petstore.yaml",
+            config: config,
+            fileFilter: [
+                "Paths/PathsPets.swift",
+                "Paths/PathsPetsWithPetID.swift",
+            ]
+        )
+    }
+
+    @Test
+    func `config rest paths style`() throws {
+        var config = pathConfig()
+        config.paths.style = .rest
+
+        try DirectorySnapshot.assert(
+            named: "config-rest-paths-style",
+            spec: "config-paths.yaml",
+            config: config,
+            fileFilter: [
+                "Paths/PathsWidgets.swift",
+                "Paths/PathsWidgetsWithWidgetID.swift",
+            ]
+        )
+    }
+
+    @Test
+    func `config rest paths style deprecation remove`() throws {
+        var config = pathConfig(path: "/legacy")
+        config.comments.annotateDeprecations = .remove
+        config.paths.style = .rest
+
+        try DirectorySnapshot.assert(
+            named: "config-rest-paths-style-deprecation-remove",
+            spec: "config-path-deprecated.yaml",
+            config: config,
+            fileFilter: ["Paths/PathsLegacy.swift"]
+        )
+    }
+
+    @Test
+    func `rest paths style duplicate component names`() throws {
+        var config = Configuration()
+        config.extensions.emit = []
+        config.generate = [.paths]
+        config.paths.style = .rest
+
+        try DirectorySnapshot.assert(
+            named: "rest-paths-style-duplicate-component-names",
+            spec: "rest-path-duplicates.yaml",
+            config: config,
+            fileFilter: [
+                "Paths/PathsLastNames.swift",
+                "Paths/PathsLastNames2.swift",
+            ]
+        )
+    }
+
+    @Test
+    func `rest paths style multiple methods on path`() throws {
+        var config = Configuration()
+        config.extensions.emit = []
+        config.generate = [.paths]
+        config.paths.style = .rest
+
+        try DirectorySnapshot.assert(
+            named: "rest-paths-style-multiple-methods-on-path",
+            spec: "rest-path-multiple-methods.yaml",
+            config: config,
+            fileFilter: ["Paths/PathsWidgets.swift"]
+        )
+    }
+
+    @Test
+    func `rest paths style removes redundant paths`() throws {
+        var config = Configuration()
+        config.extensions.emit = []
+        config.generate = [.paths]
+        config.paths.style = .rest
+
+        try DirectorySnapshot.assert(
+            named: "rest-paths-style-removes-redundant-paths",
+            spec: "rest-path-redundant-prefix.yaml",
+            config: config,
+            fileFilter: [
+                "Paths/PathsAPIV1Teams.swift",
+                "Paths/PathsAPIV1Users.swift",
+            ]
+        )
+    }
+
+    @Test
+    func `rest paths style keeps redundant paths when disabled`() throws {
+        var config = Configuration()
+        config.extensions.emit = []
+        config.generate = [.paths]
+        config.paths.removeRedundantPaths = false
+        config.paths.style = .rest
+
+        try DirectorySnapshot.assert(
+            named: "rest-paths-style-keeps-redundant-paths-when-disabled",
+            spec: "rest-path-redundant-prefix.yaml",
+            config: config,
+            fileFilter: [
+                "Paths/PathsAPI.swift",
+                "Paths/PathsAPIV1.swift",
+                "Paths/PathsAPIV1Teams.swift",
+                "Paths/PathsAPIV1Users.swift",
+            ]
+        )
+    }
+
+    @Test
     func `petstore sort properties alphabetically`() throws {
         var config = Configuration()
         config.entities.sortProperties = true

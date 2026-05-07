@@ -273,6 +273,10 @@ public extension Entities {
 }
 
 public struct Paths: Decodable, Sendable {
+    public enum Style: String, Codable, Sendable {
+        case operations
+        case rest
+    }
 
     public var bodyTypeOverrides: [String: String] = [:]
     public var exclude: Set<String> = []
@@ -282,7 +286,9 @@ public struct Paths: Decodable, Sendable {
     public var inlineQueryParameterLimit: Int? = 2
     public var inlineSimpleRequests: Bool = true
     public var namespace: String = "Paths"
+    public var removeRedundantPaths: Bool = true
     public var responseTypeOverrides: [String: String] = [:]
+    public var style: Style = .operations
 
     public init() {}
 
@@ -295,7 +301,9 @@ public struct Paths: Decodable, Sendable {
         case inlineQueryParameterLimit
         case inlineSimpleRequests
         case namespace
+        case removeRedundantPaths
         case responseTypeOverrides
+        case style
     }
 
     public init(from decoder: Decoder) throws {
@@ -311,8 +319,10 @@ public struct Paths: Decodable, Sendable {
         }
         inlineSimpleRequests = try container.decodeIfPresent(Bool.self, forKey: .inlineSimpleRequests) ?? inlineSimpleRequests
         namespace = try container.decodeIfPresent(String.self, forKey: .namespace) ?? namespace
+        removeRedundantPaths = try container.decodeIfPresent(Bool.self, forKey: .removeRedundantPaths) ?? removeRedundantPaths
         responseTypeOverrides = try container
             .decodeIfPresent([String: String].self, forKey: .responseTypeOverrides) ?? responseTypeOverrides
+        style = try container.decodeIfPresent(Style.self, forKey: .style) ?? style
     }
 }
 

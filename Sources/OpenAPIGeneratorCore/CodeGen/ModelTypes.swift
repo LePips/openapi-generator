@@ -255,6 +255,7 @@ struct DeclarationMetadata {
 
 struct PathOp {
     let name: PropertyName
+    let isStatic: Bool
     let summary: String?
     let description: String?
     let isDeprecated: Bool

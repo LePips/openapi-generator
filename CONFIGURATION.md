@@ -49,7 +49,9 @@ Configuration files may be written as YAML or JSON and passed with `--config` or
   - [`inlineQueryParameterLimit`](#pathsinlinequeryparameterlimit)
   - [`inlineSimpleRequests`](#pathsinlinesimplerequests)
   - [`namespace`](#pathsnamespace)
+  - [`removeRedundantPaths`](#pathsremoveredundantpaths)
   - [`responseTypeOverrides`](#pathsresponsetypeoverrides)
+  - [`style`](#pathsstyle)
 - [`pluralizeProperties`](#pluralizeproperties)
 - [`rename`](#rename)
   - [`enumCases`](#renameenumcases)
@@ -1173,6 +1175,39 @@ Extensions/StringCodingKey.swift
 
 # Paths
 
+## `paths.style`
+
+Type: `operations | rest`  
+Default: `operations`
+
+Controls the shape of generated request builders.
+
+- `operations` writes a plain list of operation-id based members, such as `Paths.listPets(limit: nil)`.
+- `rest` writes CreateAPI-style nested path components, such as `Paths.pets.get(limit: nil)` and `Paths.pets.petID("1").get`.
+
+<details>
+<summary>Example</summary>
+
+Default:
+```swift
+Paths.listPets(limit: nil)
+Paths.showPetByID(petID: "1")
+```
+
+Option:
+```yaml
+paths:
+  style: rest
+```
+
+Result:
+```swift
+Paths.pets.get(limit: nil)
+Paths.pets.petID("1").get
+```
+
+</details>
+
 ## `paths.bodyTypeOverrides`
 
 Type: `[String: String]`  
@@ -1424,6 +1459,37 @@ extension API {
         Request(path: "/users/me", method: "GET", id: "getUser")
     }
 }
+```
+
+</details>
+
+## `paths.removeRedundantPaths`
+
+Type: `Bool`  
+Default: `true`
+
+When `paths.style` is `rest`, skips common leading path components when every generated path shares the same prefix and doing so does not hide an operation or a path parameter.
+
+<details>
+<summary>Example</summary>
+
+Default with paths `/api/v1/users` and `/api/v1/teams`:
+```swift
+Paths.users.get
+Paths.teams.get
+```
+
+Option:
+```yaml
+paths:
+  style: rest
+  removeRedundantPaths: false
+```
+
+Result:
+```swift
+Paths.api.v1.users.get
+Paths.api.v1.teams.get
 ```
 
 </details>

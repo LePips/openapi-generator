@@ -32,6 +32,26 @@ enum BuildMode: String, CaseIterable {
     }
 }
 
+enum PathGeneration: String, CaseIterable {
+    case operations
+    case paths
+
+    var configContents: String {
+        let style = switch self {
+        case .operations:
+            "operations"
+        case .paths:
+            "rest"
+        }
+        return """
+        generate:
+          - paths
+        paths:
+          style: \(style)
+        """
+    }
+}
+
 struct ProcessResult {
     let status: Int32
     let output: String
@@ -40,6 +60,7 @@ struct ProcessResult {
 struct BenchmarkResult {
     let schema: Schema
     let mode: BuildMode
+    let generation: PathGeneration
     let elapsed: TimeInterval
     let fileCount: Int?
     let byteCount: UInt64?
@@ -108,41 +129,62 @@ do {
     })
 
     var results: [BenchmarkResult] = []
+    let configURLs = try Dictionary(uniqueKeysWithValues: PathGeneration.allCases.map { generation in
+        let configURL = outputRootURL
+            .appending(path: "configs", directoryHint: .isDirectory)
+            .appending(path: "\(generation.rawValue).yml")
+        try fileManager.createDirectory(at: configURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data(generation.configContents.utf8).write(to: configURL)
+        return (generation, configURL)
+    })
+
     for schema in schemas {
         for mode in BuildMode.allCases {
-            let outputURL = outputRootURL
-                .appending(path: mode.rawValue, directoryHint: .isDirectory)
-                .appending(path: schema.nameWithoutExtension, directoryHint: .isDirectory)
+            for generation in PathGeneration.allCases {
+                let outputURL = outputRootURL
+                    .appending(path: mode.rawValue, directoryHint: .isDirectory)
+                    .appending(path: generation.rawValue, directoryHint: .isDirectory)
+                    .appending(path: schema.nameWithoutExtension, directoryHint: .isDirectory)
 
-            try? fileManager.removeItem(at: outputURL)
+                try? fileManager.removeItem(at: outputURL)
 
-            let start = Date()
-            let generation = try run(
-                executables[mode]!.path,
-                arguments: ["generate", schema.url.path, "--output", outputURL.path],
-                currentDirectory: rootURL
-            )
-            let elapsed = Date().timeIntervalSince(start)
+                let start = Date()
+                let generated = try run(
+                    executables[mode]!.path,
+                    arguments: [
+                        "generate",
+                        schema.url.path,
+                        "--config",
+                        configURLs[generation]!.path,
+                        "--output",
+                        outputURL.path,
+                    ],
+                    currentDirectory: rootURL
+                )
+                let elapsed = Date().timeIntervalSince(start)
 
-            if generation.status == 0 {
-                let size = try directorySize(at: outputURL)
-                results.append(BenchmarkResult(
-                    schema: schema,
-                    mode: mode,
-                    elapsed: elapsed,
-                    fileCount: size.fileCount,
-                    byteCount: size.byteCount,
-                    errorOutput: nil
-                ))
-            } else {
-                results.append(BenchmarkResult(
-                    schema: schema,
-                    mode: mode,
-                    elapsed: elapsed,
-                    fileCount: nil,
-                    byteCount: nil,
-                    errorOutput: generation.output.trimmingCharacters(in: .whitespacesAndNewlines)
-                ))
+                if generated.status == 0 {
+                    let size = try directorySize(at: outputURL)
+                    results.append(BenchmarkResult(
+                        schema: schema,
+                        mode: mode,
+                        generation: generation,
+                        elapsed: elapsed,
+                        fileCount: size.fileCount,
+                        byteCount: size.byteCount,
+                        errorOutput: nil
+                    ))
+                } else {
+                    results.append(BenchmarkResult(
+                        schema: schema,
+                        mode: mode,
+                        generation: generation,
+                        elapsed: elapsed,
+                        fileCount: nil,
+                        byteCount: nil,
+                        errorOutput: generated.output.trimmingCharacters(in: .whitespacesAndNewlines)
+                    ))
+                }
             }
         }
     }
@@ -232,6 +274,7 @@ func printTable(_ results: [BenchmarkResult]) {
         [
             result.schema.name,
             result.mode.rawValue,
+            result.generation.rawValue,
             result.succeeded ? "ok" : "failed",
             String(format: "%.2f", result.elapsed),
             result.fileCount.map(String.init) ?? "n/a",
@@ -239,7 +282,7 @@ func printTable(_ results: [BenchmarkResult]) {
         ]
     }
 
-    let header = ["schema", "mode", "status", "time(s)", "files", "size"]
+    let header = ["schema", "mode", "generation", "status", "time(s)", "files", "size"]
     let widths = columnWidths(header: header, rows: rows)
 
     print(formatRow(header, widths: widths))
@@ -255,7 +298,7 @@ func printFailures(_ results: [BenchmarkResult]) {
     print("")
     print("Failures:")
     for failure in failures {
-        print("[\(failure.schema.name), \(failure.mode.rawValue)]")
+        print("[\(failure.schema.name), \(failure.mode.rawValue), \(failure.generation.rawValue)]")
         print(failure.errorOutput?.isEmpty == false ? failure.errorOutput! : "No error output captured.")
     }
 }

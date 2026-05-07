@@ -3,21 +3,11 @@ import OpenAPIKit30
 
 extension CodeGen {
     func pathFiles() throws -> [GeneratedFile] {
-        let operations = try plan.document.paths.flatMap { path, item -> [(OpenAPI.Path, OpenAPI.PathItem, String, OpenAPI.Operation)] in
-            guard shouldGeneratePath(path.rawValue) else { return [] }
-            let resolved = try item.unwrapped(in: plan.document)
-            return resolved.allOperations.map { method, operation in (path, resolved, method, operation) }
-        }
-
-        return try operations.compactMap { path, item, method, operation in
-            guard !shouldRemoveDeprecated(operation.deprecated) else { return nil }
-            let operationID = plan.config.rename.operations[operation.operationId ?? ""] ?? (operation.operationId ?? "")
-            guard !operationID.isEmpty else { throw GeneratorError("OperationId is invalid or missing for \(path.rawValue)") }
-            let declaration = try makeOperation(path: path, item: item, method: method, operation: operation, operationID: operationID)
-            let filename = names.type(operationID).rawValue
-            let body = renderOperation(declaration)
-            let source = sourceFile(imports: pathImports(), body: body)
-            return GeneratedFile(relativePath: "Paths/\(template(plan.config.paths.filenameTemplate, filename))", contents: source)
+        switch plan.config.paths.style {
+        case .operations:
+            try operationPathFiles()
+        case .rest:
+            try restPathFiles()
         }
     }
 
@@ -42,27 +32,37 @@ extension CodeGen {
         item: OpenAPI.PathItem,
         method: String,
         operation: OpenAPI.Operation,
-        operationID: String
+        operationID: String,
+        baseName: TypeName,
+        memberName: PropertyName,
+        isStatic: Bool,
+        usesStoredPath: Bool
     ) throws -> PathOp {
-        let baseName = names.type(operationID)
         let context = MakeContext()
         var parameters: [FuncParam] = []
         var call: [String] = []
         var nested: [SwiftDecl] = []
 
-        var interpolatedPath = path.rawValue
-        for parameter in try pathParameters(item: item, operation: operation) {
-            if let range = interpolatedPath.range(of: "{\(parameter.key)}") {
-                interpolatedPath.replaceSubrange(range, with: "\\(\(parameter.name.rawValue))")
+        if usesStoredPath {
+            call.append("path: path")
+        } else {
+            var interpolatedPath = path.rawValue
+            for parameter in try pathParameters(item: item, operation: operation) {
+                if let range = interpolatedPath.range(of: "{\(parameter.key)}") {
+                    interpolatedPath.replaceSubrange(range, with: "\\(\(parameter.name.rawValue))")
+                }
+                parameters.append(.init(
+                    label: parameter.name.rawValue,
+                    externalName: parameter.name.rawValue,
+                    type: .builtin(parameter.type.rawValue),
+                    defaultValue: nil
+                ))
             }
-            parameters.append(.init(
-                label: parameter.name.rawValue,
-                externalName: parameter.name.rawValue,
-                type: .builtin(parameter.type.rawValue),
-                defaultValue: nil
-            ))
+            if interpolatedPath.contains("{") {
+                throw GeneratorError("One or more path parameters for \(operationID) is missing")
+            }
+            call.append("path: \"\(interpolatedPath)\"")
         }
-        call.append("path: \"\(interpolatedPath)\"")
         call.append("method: \"\(method.uppercased())\"")
 
         let response = try responseType(operation: operation, nestedTypeName: baseName.appending("Response"), context: context)
@@ -92,7 +92,7 @@ extension CodeGen {
                 call.append("query: \(functionName)(\(query.map(\.name.rawValue).joined(separator: ", ")))")
                 nested.append(InlineFunctionDecl(
                     name: TypeName(functionName),
-                    contents: renderInlineQueryFunction(name: functionName, properties: query, isStatic: true)
+                    contents: renderInlineQueryFunction(name: functionName, properties: query, isStatic: isStatic)
                 ))
             }
         } else {
@@ -153,9 +153,12 @@ extension CodeGen {
             }
         }
 
-        call.append("id: \"\(operationID)\"")
+        if !operationID.isEmpty {
+            call.append("id: \"\(operationID)\"")
+        }
         return PathOp(
-            name: names.property(operationID),
+            name: memberName,
+            isStatic: isStatic,
             summary: operation.summary,
             description: operation.description,
             isDeprecated: operation.deprecated,

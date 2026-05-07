@@ -7,13 +7,8 @@ import OpenAPIKit30
 struct OpenAPIGenerator: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "openapi-generator",
-        abstract: "Generate Swift SDK sources from an OpenAPI document.",
-        subcommands: [Generate.self],
-        defaultSubcommand: Generate.self
+        abstract: "Generate Swift SDK sources from an OpenAPI document."
     )
-}
-
-struct Generate: AsyncParsableCommand {
 
     @Argument(help: "OpenAPI document in JSON or YAML format.")
     var input: String

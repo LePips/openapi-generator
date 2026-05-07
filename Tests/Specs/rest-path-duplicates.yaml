@@ -1,0 +1,17 @@
+openapi: 3.0.0
+info:
+  title: REST Path Duplicate Names
+  version: 1.0.0
+paths:
+  /last-names:
+    get:
+      operationId: getLastNames
+      responses:
+        "204":
+          description: Empty response
+  /last_names:
+    get:
+      operationId: getLastNamesUnderscore
+      responses:
+        "204":
+          description: Empty response
