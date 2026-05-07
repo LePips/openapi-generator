@@ -5,11 +5,60 @@
 import Foundation
 
 public struct CatalogItemGroup: Codable {
-    public var attributes: CatalogItemGroupAttributes?
-    public var data: [CatalogItemGroupDataItem]?
+    public var attributes: Attributes?
+    public var data: [DataItem]?
     public var id: String?
 
-    public init(attributes: CatalogItemGroupAttributes? = nil, data: [CatalogItemGroupDataItem]? = nil, id: String? = nil) {
+    public struct Attributes: Codable {
+        public var groupKind: String?
+
+        public init(groupKind: String? = nil) {
+            self.groupKind = groupKind
+        }
+
+        public enum CodingKeys: String, CodingKey {
+            case groupKind = "groupKind"
+        }
+
+        public init(from decoder: Decoder) throws {
+            let values = try decoder.container(keyedBy: CodingKeys.self)
+            self.groupKind = try values.decodeIfPresent(String.self, forKey: .groupKind)
+        }
+
+        public func encode(to encoder: Encoder) throws {
+            var values = encoder.container(keyedBy: CodingKeys.self)
+            try values.encodeIfPresent(groupKind, forKey: .groupKind)
+        }
+    }
+
+    public struct DataItem: Codable {
+        public var position: Int?
+        public var region: String?
+
+        public init(position: Int? = nil, region: String? = nil) {
+            self.position = position
+            self.region = region
+        }
+
+        public enum CodingKeys: String, CodingKey {
+            case position = "position"
+            case region = "region"
+        }
+
+        public init(from decoder: Decoder) throws {
+            let values = try decoder.container(keyedBy: CodingKeys.self)
+            self.position = try values.decodeIfPresent(Int.self, forKey: .position)
+            self.region = try values.decodeIfPresent(String.self, forKey: .region)
+        }
+
+        public func encode(to encoder: Encoder) throws {
+            var values = encoder.container(keyedBy: CodingKeys.self)
+            try values.encodeIfPresent(position, forKey: .position)
+            try values.encodeIfPresent(region, forKey: .region)
+        }
+    }
+
+    public init(attributes: Attributes? = nil, data: [DataItem]? = nil, id: String? = nil) {
         self.attributes = attributes
         self.data = data
         self.id = id
@@ -23,8 +72,8 @@ public struct CatalogItemGroup: Codable {
 
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
-        self.attributes = try values.decodeIfPresent(CatalogItemGroupAttributes.self, forKey: .attributes)
-        self.data = try values.decodeIfPresent([CatalogItemGroupDataItem].self, forKey: .data)
+        self.attributes = try values.decodeIfPresent(Attributes.self, forKey: .attributes)
+        self.data = try values.decodeIfPresent([DataItem].self, forKey: .data)
         self.id = try values.decodeIfPresent(String.self, forKey: .id)
     }
 

@@ -19,14 +19,6 @@ extension CodeGen {
                 state.madeSchemas[entity.name] = entity
             }
         }
-        state.fileTypes = Set(declarations.filter { !($0 is TypealiasDecl) }.map(\.name))
-        for declaration in declarations where !(declaration is TypealiasDecl) {
-            _ = try state.decls.register(
-                declaration,
-                source: "component schema \(declaration.name.rawValue)",
-                emit: false
-            )
-        }
 
         return try zip(jobs, declarations).compactMap { job, declaration in
             if declaration is TypealiasDecl {
@@ -335,20 +327,10 @@ extension CodeGen {
         fallback: String,
         context: inout MakeContext
     ) throws -> (type: SwiftType, nested: SwiftDecl?) {
-        let name = usesPromotedInlineName(for: schema) ? inlineTypeName(fallback: fallback, context: context) : names.type(fallback)
+        let name = usesInlineTypeName(for: schema) ? inlineTypeName(fallback: fallback) : names.type(fallback)
         let declaration = try makeDeclaration(name: name, schema: schema, context: context)
         if let alias = declaration as? TypealiasDecl {
-            if let nested = alias.nested, shouldPromote(nested, context: context) {
-                _ = try registerPromoted(nested, context: context, source: sourceDescription(fallback: fallback, context: context))
-                return (alias.type, nil)
-            }
             return (alias.type, alias.nested)
-        }
-        if shouldPromote(declaration, context: context) {
-            return try (
-                registerPromoted(declaration, context: context, source: sourceDescription(fallback: fallback, context: context)),
-                nil
-            )
         }
         return (.userDefined(declaration.name), declaration)
     }

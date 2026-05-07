@@ -20,17 +20,14 @@ public final class CodeGen {
         if plan.config.generate.contains(.paths) {
             files += try pathFiles()
         }
-        files += try promotedFiles()
         return GeneratedSourceBundle(files: files, usage: state.usage)
     }
 }
 
 struct BuildState {
     var usage = GenerationUsage()
-    var decls = DeclStore()
     var madeSchemas: [TypeName: EntityDecl] = [:]
     var topLevelTypes = Set<TypeName>()
-    var fileTypes = Set<TypeName>()
     var componentTypeNames: [String: TypeName] = [:]
     var referenceTypes: [ReferenceTypeCacheKey: SwiftType] = [:]
     let excludedEntities: Set<String>

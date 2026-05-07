@@ -59,19 +59,15 @@ extension CodeGen {
             }
             return names.type(fallback)
         default:
-            return usesPromotedInlineName(for: schema) ? inlineTypeName(fallback: fallback, context: context) : names.type(fallback)
+            return usesInlineTypeName(for: schema) ? inlineTypeName(fallback: fallback) : names.type(fallback)
         }
     }
 
-    func inlineTypeName(fallback: String, context: MakeContext) -> TypeName {
-        let fallbackName = names.type(fallback)
-        guard let parent = context.parents.last else {
-            return fallbackName
-        }
-        return TypeName(parent.name.rawValue + fallbackName.rawValue)
+    func inlineTypeName(fallback: String) -> TypeName {
+        names.type(fallback)
     }
 
-    func usesPromotedInlineName(for schema: JSONSchema) -> Bool {
+    func usesInlineTypeName(for schema: JSONSchema) -> Bool {
         switch schema.value {
         case .boolean, .number, .integer, .reference, .fragment, .not:
             return false
@@ -79,21 +75,21 @@ extension CodeGen {
             return !(plan.config.entities.stringEnums && info.allowedValues != nil)
         case let .array(_, details):
             guard let item = details.items else { return false }
-            return usesPromotedInlineName(for: item)
+            return usesInlineTypeName(for: item)
         case let .object(_, details):
             if !details.properties.isEmpty {
                 return true
             }
             if case let .b(schema) = details.additionalProperties {
-                return usesPromotedInlineName(for: schema)
+                return usesInlineTypeName(for: schema)
             }
             return false
         case let .all(schemas, _) where schemas.count == 1:
-            return usesPromotedInlineName(for: schemas[0])
+            return usesInlineTypeName(for: schemas[0])
         case let .one(schemas, _) where schemas.count == 1:
-            return usesPromotedInlineName(for: schemas[0])
+            return usesInlineTypeName(for: schemas[0])
         case let .any(schemas, _) where schemas.count == 1:
-            return usesPromotedInlineName(for: schemas[0])
+            return usesInlineTypeName(for: schemas[0])
         case .all, .one, .any:
             return true
         }

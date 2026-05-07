@@ -1,50 +1,6 @@
 import Foundation
 import OpenAPIKit30
 
-struct StoredDecl {
-    let declaration: SwiftDecl
-    var fingerprint: String?
-    var sources: Set<String>
-    var emit: Bool
-}
-
-final class DeclStore {
-    private var entries: [TypeName: StoredDecl] = [:]
-
-    func register(_ declaration: SwiftDecl, source: String, emit: Bool) throws -> StoredDecl {
-        if var existing = entries[declaration.name] {
-            let existingFingerprint = existing.fingerprint ?? existing.declaration.structuralFingerprint
-            let fingerprint = declaration.structuralFingerprint
-            guard existingFingerprint == fingerprint else {
-                let sources = (existing.sources.union([source])).sorted().joined(separator: ", ")
-                throw GeneratorError("Generated type '\(declaration.name.rawValue)' has multiple incompatible shapes: \(sources).")
-            }
-            existing.fingerprint = existingFingerprint
-            existing.sources.insert(source)
-            existing.emit = existing.emit || emit
-            entries[declaration.name] = existing
-            return existing
-        }
-
-        let entry = StoredDecl(
-            declaration: declaration,
-            fingerprint: nil,
-            sources: [source],
-            emit: emit
-        )
-        entries[declaration.name] = entry
-        return entry
-    }
-
-    func promotedEntries(excluding canonicalFileTypes: Set<TypeName>) -> [StoredDecl] {
-        entries.values
-            .filter { $0.emit && !canonicalFileTypes.contains($0.declaration.name) }
-            .sorted {
-                $0.declaration.name.rawValue < $1.declaration.name.rawValue
-            }
-    }
-}
-
 protocol SwiftDecl {
     var name: TypeName { get }
 }
@@ -192,7 +148,6 @@ final class EntityDecl: SwiftDecl {
     let kind: EntityKind
     let metadata: DeclarationMetadata
     let isForm: Bool
-    fileprivate var structuralFingerprintCache: String?
     var protocols: [String] = []
     var properties: [Property] = []
     var discriminator: Discriminator?
@@ -313,65 +268,5 @@ public struct GeneratorError: Error, CustomStringConvertible, LocalizedError {
 
     public var errorDescription: String? {
         message
-    }
-}
-
-private extension SwiftDecl {
-    var structuralFingerprint: String {
-        switch self {
-        case let declaration as EntityDecl:
-            return declaration.structuralFingerprint
-        case let declaration as StringEnumDecl:
-            let cases = declaration.cases.map { "\($0.name)=\($0.rawValue)" }.joined(separator: ",")
-            return "enum|\(declaration.name.rawValue)|\(cases)"
-        case let declaration as TypealiasDecl:
-            return "typealias|\(declaration.name.rawValue)|\(declaration.type)|\(declaration.nested?.structuralFingerprint ?? "")"
-        case let declaration as InlineFunctionDecl:
-            return "function|\(declaration.name.rawValue)|\(declaration.contents)"
-        default:
-            return "unknown|\(name.rawValue)"
-        }
-    }
-}
-
-private extension EntityDecl {
-    var structuralFingerprint: String {
-        if let structuralFingerprintCache {
-            return structuralFingerprintCache
-        }
-        let properties = properties
-            .map(\.structuralFingerprint)
-            .joined(separator: ";")
-        let discriminator = discriminator
-            .map { "\($0.propertyName)|\($0.mapping.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: ","))" } ??
-            ""
-        let fingerprint = [
-            "entity",
-            name.rawValue,
-            "\(kind)",
-            "form:\(isForm)",
-            "rendered:\(isRenderedAsStruct)",
-            "protocols:\(protocols.joined(separator: ","))",
-            "properties:\(properties)",
-            "discriminator:\(discriminator)",
-        ].joined(separator: "|")
-        structuralFingerprintCache = fingerprint
-        return fingerprint
-    }
-}
-
-private extension Property {
-    var structuralFingerprint: String {
-        [
-            name.rawValue,
-            "\(type)",
-            "optional:\(isOptional)",
-            "key:\(key)",
-            "explode:\(explode)",
-            "style:\(style.map(String.init(describing:)) ?? "")",
-            "default:\(defaultValue ?? "")",
-            "indirect:\(isIndirect)",
-            "nested:\(nested?.structuralFingerprint ?? "")",
-        ].joined(separator: "|")
     }
 }

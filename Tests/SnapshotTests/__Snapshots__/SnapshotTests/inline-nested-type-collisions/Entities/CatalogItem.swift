@@ -5,11 +5,65 @@
 import Foundation
 
 public struct CatalogItem: Codable {
-    public var attributes: CatalogItemAttributes?
-    public var data: [CatalogItemDataItem]?
+    public var attributes: Attributes?
+    public var data: [DataItem]?
     public var id: String?
 
-    public init(attributes: CatalogItemAttributes? = nil, data: [CatalogItemDataItem]? = nil, id: String? = nil) {
+    public struct Attributes: Codable {
+        public var displayName: String?
+        public var resourceURL: String?
+
+        public init(displayName: String? = nil, resourceURL: String? = nil) {
+            self.displayName = displayName
+            self.resourceURL = resourceURL
+        }
+
+        public enum CodingKeys: String, CodingKey {
+            case displayName = "displayName"
+            case resourceURL = "resourceUrl"
+        }
+
+        public init(from decoder: Decoder) throws {
+            let values = try decoder.container(keyedBy: CodingKeys.self)
+            self.displayName = try values.decodeIfPresent(String.self, forKey: .displayName)
+            self.resourceURL = try values.decodeIfPresent(String.self, forKey: .resourceURL)
+        }
+
+        public func encode(to encoder: Encoder) throws {
+            var values = encoder.container(keyedBy: CodingKeys.self)
+            try values.encodeIfPresent(displayName, forKey: .displayName)
+            try values.encodeIfPresent(resourceURL, forKey: .resourceURL)
+        }
+    }
+
+    public struct DataItem: Codable {
+        public var digest: String?
+        public var size: Int?
+
+        public init(digest: String? = nil, size: Int? = nil) {
+            self.digest = digest
+            self.size = size
+        }
+
+        public enum CodingKeys: String, CodingKey {
+            case digest = "digest"
+            case size = "size"
+        }
+
+        public init(from decoder: Decoder) throws {
+            let values = try decoder.container(keyedBy: CodingKeys.self)
+            self.digest = try values.decodeIfPresent(String.self, forKey: .digest)
+            self.size = try values.decodeIfPresent(Int.self, forKey: .size)
+        }
+
+        public func encode(to encoder: Encoder) throws {
+            var values = encoder.container(keyedBy: CodingKeys.self)
+            try values.encodeIfPresent(digest, forKey: .digest)
+            try values.encodeIfPresent(size, forKey: .size)
+        }
+    }
+
+    public init(attributes: Attributes? = nil, data: [DataItem]? = nil, id: String? = nil) {
         self.attributes = attributes
         self.data = data
         self.id = id
@@ -23,8 +77,8 @@ public struct CatalogItem: Codable {
 
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
-        self.attributes = try values.decodeIfPresent(CatalogItemAttributes.self, forKey: .attributes)
-        self.data = try values.decodeIfPresent([CatalogItemDataItem].self, forKey: .data)
+        self.attributes = try values.decodeIfPresent(Attributes.self, forKey: .attributes)
+        self.data = try values.decodeIfPresent([DataItem].self, forKey: .data)
         self.id = try values.decodeIfPresent(String.self, forKey: .id)
     }
 

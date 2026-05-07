@@ -1,41 +1,6 @@
 import Foundation
 
 extension CodeGen {
-    /// Writes promoted nested entity shapes as standalone files when they are shared or recursive.
-    func promotedFiles() throws -> [GeneratedFile] {
-        try state.decls.promotedEntries(excluding: state.fileTypes).map { entry in
-            let relativePath = "Entities/\(template(plan.config.entities.filenameTemplate, entry.declaration.name.rawValue))"
-            let source = try sourceFile(imports: plan.config.entities.imports, body: render(entry.declaration))
-            return GeneratedFile(relativePath: relativePath, contents: source)
-        }
-    }
-
-    func shouldPromote(_ declaration: SwiftDecl, context: MakeContext) -> Bool {
-        declaration is EntityDecl && !context.parents.isEmpty
-    }
-
-    /// Keeps promoted declarations unique by name and shape before rendering a top-level file.
-    func registerPromoted(_ declaration: SwiftDecl, context: MakeContext, source: String) throws -> SwiftType {
-        _ = try state.decls.register(declaration, source: source, emit: true)
-        let type = SwiftType.userDefined(declaration.name)
-        if context.namespace != nil {
-            return type.namespace(context.namespace)
-        }
-        return type
-    }
-
-    func sourceDescription(fallback: String, context: MakeContext) -> String {
-        if let parent = context.parents.last?.name.rawValue {
-            return "\(parent).\(fallback)"
-        }
-        if context.namespace == plan.config.module {
-            return "operation support \(fallback)"
-        }
-        return fallback
-    }
-}
-
-extension CodeGen {
     func sourceFile(imports: Set<String>, body: String) -> String {
         let importBlock = imports.sorted().map { "import \($0)" }.joined(separator: "\n")
         let normalizedBody = body.replacingOccurrences(of: "\(plan.config.module).\(plan.config.module).", with: "\(plan.config.module).")
