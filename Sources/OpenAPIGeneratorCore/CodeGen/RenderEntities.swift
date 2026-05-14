@@ -223,13 +223,12 @@ extension CodeGen {
     /// Reads the discriminator field first so decoding can pick the mapped case directly.
     func renderOneOfDecodeWithDiscriminator(properties: [Property], discriminator: Discriminator) -> String {
         let propertyName = discriminator.propertyName == "Type" ? PropertyName("_Type") : PropertyName(discriminator.propertyName)
-        var expected: [String] = []
-        let cases = properties.flatMap { property -> [String] in
-            discriminator.mapping.filter { $0.value == property.type }.sorted { $0.key < $1.key }.map { key, _ in
-                expected.append(key)
-                return "case \"\(key)\": self = try .\(property.name.rawValue)(container.decode(\(property.type).self))"
-            }
+        let propertiesByType = Dictionary(grouping: properties, by: \.type)
+        let cases = discriminator.mapping.sorted { $0.key < $1.key }.compactMap { key, type -> String? in
+            guard let caseName = discriminator.cases[key] ?? propertiesByType[type]?.first?.name else { return nil }
+            return "case \"\(key)\": self = try .\(caseName.rawValue)(container.decode(\(type).self))"
         }.joined(separator: "\n")
+        let expected = discriminator.mapping.keys.sorted()
         return """
         \(access)init(from decoder: Decoder) throws {
 

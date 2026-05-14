@@ -96,6 +96,24 @@ struct SnapshotTests {
     }
 
     @Test
+    func `discriminator shared shape type deduplication`() throws {
+        var config = Configuration()
+        config.entities.sharedShapeTypes = ["Cat": "SharedAnimal"]
+        config.extensions.emit = []
+        config.generate = [.entities]
+
+        try DirectorySnapshot.assert(
+            named: "discriminator-shared-shape-type-deduplication",
+            spec: "discriminator-shared-shape-dedup.yaml",
+            config: config,
+            fileFilter: [
+                "Entities/Payload.swift",
+                "Entities/SharedAnimal.swift",
+            ]
+        )
+    }
+
+    @Test
     func `petstore custom imports`() throws {
         var config = Configuration()
         config.paths.imports = ["Foundation", "Get", "HTTPHeaders", "CoreData"]

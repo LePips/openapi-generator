@@ -229,7 +229,7 @@ extension CodeGen {
         context.parents.append(entity)
         entity.properties = try makeVariantProperties(schemas: schemas, context: context).removingDuplicates(by: \.type)
         entity.protocols = protocols(for: entity, context: context)
-        entity.discriminator = try discriminator(info: info, context: context)
+        entity.discriminator = try discriminator(info: info, properties: entity.properties, context: context)
         return entity
     }
 
@@ -471,16 +471,20 @@ extension CodeGen {
         }
     }
 
-    func discriminator(info: JSONSchemaContext, context: MakeContext) throws -> Discriminator? {
+    func discriminator(info: JSONSchemaContext, properties: [Property], context: MakeContext) throws -> Discriminator? {
         try info.discriminator.flatMap { discriminator in
             var mappings: [String: SwiftType] = [:]
+            var cases: [String: PropertyName] = [:]
             mappings.reserveCapacity(discriminator.mapping?.count ?? 0)
             for (key, value) in discriminator.mapping ?? [:] {
-                mappings[key] = try referenceType(discriminatorReference(value), context: context)
+                let type = try referenceType(discriminatorReference(value), context: context)
+                mappings[key] = type
+                cases[key] = properties.first { $0.type == type }?.name
             }
             return Discriminator(
                 propertyName: discriminator.propertyName,
-                mapping: mappings
+                mapping: mappings,
+                cases: cases
             )
         }
     }

@@ -186,6 +186,7 @@ struct InlineFunctionDecl: SwiftDecl {
 struct Discriminator {
     let propertyName: String
     let mapping: [String: SwiftType]
+    let cases: [String: PropertyName]
 }
 
 struct DeclarationMetadata {

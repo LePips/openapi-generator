@@ -391,7 +391,8 @@ private extension CodeGen {
                         topLevelReplacements: topLevelReplacements,
                         localReplacements: nestedLocalReplacements
                     )
-                }
+                },
+                cases: discriminator.cases
             )
         }
     }
