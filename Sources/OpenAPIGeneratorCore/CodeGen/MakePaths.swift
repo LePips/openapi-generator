@@ -2,12 +2,33 @@ import Foundation
 import OpenAPIKit30
 
 extension CodeGen {
-    func pathFiles() throws -> [GeneratedFile] {
+    func pathFileJobs() throws -> [PathFileJob] {
         switch plan.config.paths.style {
         case .operations:
-            try operationPathFiles()
+            try operationPathFileJobs()
         case .rest:
-            try restPathFiles()
+            try restPathFileJobs()
+        }
+    }
+
+    func renderPathFiles(_ jobs: [PathFileJob]) throws -> [GeneratedFile] {
+        try jobs.map { job in
+            switch job {
+            case let .operation(job):
+                let body = renderOperation(job.declaration)
+                let source = sourceFile(imports: pathImports(), body: body)
+                return GeneratedFile(
+                    relativePath: "Paths/\(template(plan.config.paths.filenameTemplate, job.filename))",
+                    contents: source
+                )
+            case let .rest(job):
+                let body = try renderRestPath(job.job, operations: job.operations)
+                let source = sourceFile(imports: pathImports(), body: body)
+                return GeneratedFile(
+                    relativePath: "Paths/\(template(plan.config.paths.filenameTemplate, job.job.filename))",
+                    contents: source
+                )
+            }
         }
     }
 

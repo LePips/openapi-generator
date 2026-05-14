@@ -1,0 +1,99 @@
+openapi: 3.0.0
+info:
+  title: Shared Shape Deduplication
+  version: 1.0.0
+paths:
+  /echo-address:
+    post:
+      operationId: echoAddress
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              title: Echo address request
+              description: Path-local request description.
+              type: object
+              properties:
+                city:
+                  type: string
+                street:
+                  type: string
+      responses:
+        "200":
+          description: Address echo
+          content:
+            application/json:
+              schema:
+                title: Echo address response
+                description: Path-local response description.
+                type: object
+                properties:
+                  city:
+                    type: string
+                  street:
+                    type: string
+  /validate-address:
+    post:
+      operationId: validateAddress
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              title: Validate address request
+              description: Second path-local request description.
+              type: object
+              properties:
+                city:
+                  type: string
+                street:
+                  type: string
+      responses:
+        "204":
+          description: Empty response
+components:
+  schemas:
+    ShippingAddress:
+      title: Shipping address schema
+      description: Shipping address description should not be copied to the shared type.
+      type: object
+      properties:
+        city:
+          type: string
+        street:
+          type: string
+    User:
+      type: object
+      properties:
+        address:
+          title: User address schema
+          description: User-specific address property description is copied to the shared type.
+          type: object
+          properties:
+            city:
+              type: string
+            street:
+              type: string
+        metadata:
+          type: object
+          properties:
+            source:
+              type: string
+    Organization:
+      type: object
+      properties:
+        address:
+          title: Organization address schema
+          description: Organization-specific address property description remains on the property.
+          type: object
+          properties:
+            city:
+              type: string
+            street:
+              type: string
+        metadata:
+          type: object
+          properties:
+            source:
+              type: string

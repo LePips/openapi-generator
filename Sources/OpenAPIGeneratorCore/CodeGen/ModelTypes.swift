@@ -174,7 +174,7 @@ enum EntityKind {
 
 struct TypealiasDecl: SwiftDecl {
     let name: TypeName
-    let type: SwiftType
+    var type: SwiftType
     var nested: SwiftDecl?
 }
 

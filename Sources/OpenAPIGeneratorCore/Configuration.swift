@@ -208,6 +208,7 @@ public struct Entities: Decodable, Sendable {
     public var mutableProperties: Set<MutableProperties> = [.structs]
     public var nameTemplate: String = "%0"
     public var propertyTypeOverrides: [String: String] = [:]
+    public var sharedShapeTypes: [String: String] = [:]
     public var sortProperties: Bool = true
     public var stringEnums: Bool = true
 
@@ -231,6 +232,7 @@ public struct Entities: Decodable, Sendable {
         case mutableProperties
         case nameTemplate
         case propertyTypeOverrides
+        case sharedShapeTypes
         case sortProperties
         case stringEnums
     }
@@ -256,6 +258,7 @@ public struct Entities: Decodable, Sendable {
         nameTemplate = try container.decodeIfPresent(String.self, forKey: .nameTemplate) ?? nameTemplate
         propertyTypeOverrides = try container
             .decodeIfPresent([String: String].self, forKey: .propertyTypeOverrides) ?? propertyTypeOverrides
+        sharedShapeTypes = try container.decodeIfPresent([String: String].self, forKey: .sharedShapeTypes) ?? sharedShapeTypes
         sortProperties = try container.decodeIfPresent(Bool.self, forKey: .sortProperties) ?? sortProperties
         stringEnums = try container.decodeIfPresent(Bool.self, forKey: .stringEnums) ?? stringEnums
     }

@@ -2,7 +2,7 @@ import Foundation
 import OpenAPIKit30
 
 extension CodeGen {
-    func entityFiles() throws -> [GeneratedFile] {
+    func entityFileJobs() throws -> [EntityFileJob] {
         let jobs = plan.document.components.schemas.compactMap { key, schema -> (TypeName, JSONSchema)? in
             guard let name = typeName(for: key), shouldGenerateEntity(name.rawValue) else { return nil }
             guard !shouldRemoveDeprecated(schema.coreContext?.deprecated ?? false) else { return nil }
@@ -20,7 +20,14 @@ extension CodeGen {
             }
         }
 
-        return try zip(jobs, declarations).compactMap { job, declaration in
+        return zip(jobs, declarations).map { job, declaration in
+            EntityFileJob(name: job.0, declaration: declaration)
+        }
+    }
+
+    func renderEntityFiles(_ jobs: [EntityFileJob]) throws -> [GeneratedFile] {
+        try jobs.compactMap { job in
+            let declaration = job.declaration
             if declaration is TypealiasDecl {
                 return nil
             }
@@ -29,7 +36,7 @@ extension CodeGen {
                 body: render(declaration)
             )
             return GeneratedFile(
-                relativePath: "Entities/\(template(plan.config.entities.filenameTemplate, job.0.rawValue))",
+                relativePath: "Entities/\(template(plan.config.entities.filenameTemplate, job.name.rawValue))",
                 contents: source
             )
         }

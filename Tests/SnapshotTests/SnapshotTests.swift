@@ -48,6 +48,40 @@ struct SnapshotTests {
     }
 
     @Test
+    func `shared shape type deduplication`() throws {
+        var config = Configuration()
+        config.entities.sharedShapeTypes = ["User.Address": "SharedAddress"]
+        config.extensions.emit = [.pathsNamespace, .stringCodingKey]
+
+        try DirectorySnapshot.assert(
+            named: "shared-shape-type-deduplication",
+            spec: "shared-shape-dedup.yaml",
+            config: config
+        )
+    }
+
+    @Test
+    func `shared shape type deduplication coding keys`() throws {
+        var config = Configuration()
+        config.entities.codingStrategy = .codingKeys
+        config.entities.sharedShapeTypes = ["Address": "SharedAddress"]
+        config.extensions.emit = [.pathsNamespace]
+
+        try DirectorySnapshot.assert(
+            named: "shared-shape-type-deduplication-coding-keys",
+            spec: "shared-shape-dedup.yaml",
+            config: config,
+            fileFilter: [
+                "Entities/Organization.swift",
+                "Entities/SharedAddress.swift",
+                "Entities/User.swift",
+                "Paths/EchoAddress.swift",
+                "Paths/ValidateAddress.swift",
+            ]
+        )
+    }
+
+    @Test
     func `discriminator type property`() throws {
         var config = Configuration()
         config.extensions.emit = []

@@ -24,14 +24,24 @@ extension CodeGen {
         }
     }
 
-    func restPathFiles() throws -> [GeneratedFile] {
+    func restPathFileJobs() throws -> [PathFileJob] {
         try makeRestPathJobs().map { job in
-            let body = try renderRestPath(job)
-            let source = sourceFile(imports: pathImports(), body: body)
-            return GeneratedFile(
-                relativePath: "Paths/\(template(plan.config.paths.filenameTemplate, job.filename))",
-                contents: source
-            )
+            let operations: [PathOp] = job.isSubpath ? [] : try job.item.allOperations.compactMap { method, operation in
+                guard !shouldRemoveDeprecated(operation.deprecated) else { return nil }
+                let operationID = operation.operationId ?? ""
+                return try makeOperation(
+                    path: job.path,
+                    item: job.item,
+                    method: method,
+                    operation: operation,
+                    operationID: operationID,
+                    baseName: TypeName(method.capitalizingFirstLetter()),
+                    memberName: names.property(method),
+                    isStatic: false,
+                    usesStoredPath: true
+                )
+            }
+            return .rest(RestPathFileJob(job: job, operations: operations))
         }
     }
 
@@ -114,25 +124,10 @@ extension CodeGen {
         return commonIndices
     }
 
-    func renderRestPath(_ job: RestPathJob) throws -> String {
+    func renderRestPath(_ job: RestPathJob, operations: [PathOp]) throws -> String {
         let parentTypes = Array(job.types.suffix(job.components.count)).dropLast()
         let extensionOf = ([plan.config.paths.namespace] + parentTypes.map(\.rawValue)).joined(separator: ".")
         let accessor = try renderRestPathAccessor(job)
-        let operations: [PathOp] = job.isSubpath ? [] : try job.item.allOperations.compactMap { method, operation in
-            guard !shouldRemoveDeprecated(operation.deprecated) else { return nil }
-            let operationID = operation.operationId ?? ""
-            return try makeOperation(
-                path: job.path,
-                item: job.item,
-                method: method,
-                operation: operation,
-                operationID: operationID,
-                baseName: TypeName(method.capitalizingFirstLetter()),
-                memberName: names.property(method),
-                isStatic: false,
-                usesStoredPath: true
-            )
-        }
         let entity = renderRestPathEntity(job, operations: operations)
         return renderPathExtension(of: extensionOf, contents: [accessor, entity].joined(separator: "\n\n"))
     }

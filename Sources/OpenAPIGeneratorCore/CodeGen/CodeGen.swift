@@ -14,14 +14,43 @@ public final class CodeGen {
 
     public func generate() throws -> GeneratedSourceBundle {
         var files: [GeneratedFile] = []
+        var entityJobs: [EntityFileJob] = []
+        var pathJobs: [PathFileJob] = []
+
         if plan.config.generate.contains(.entities) {
-            files += try entityFiles()
+            entityJobs = try entityFileJobs()
         }
         if plan.config.generate.contains(.paths) {
-            files += try pathFiles()
+            pathJobs = try pathFileJobs()
         }
+
+        try applySharedShapeDeduplication(entityJobs: &entityJobs, pathJobs: &pathJobs)
+
+        files += try renderEntityFiles(entityJobs)
+        files += try renderPathFiles(pathJobs)
         return GeneratedSourceBundle(files: files, usage: state.usage)
     }
+}
+
+struct EntityFileJob {
+    var name: TypeName
+    var declaration: SwiftDecl
+    var isShared = false
+}
+
+enum PathFileJob {
+    case operation(OperationPathFileJob)
+    case rest(RestPathFileJob)
+}
+
+struct OperationPathFileJob {
+    let filename: String
+    var declaration: PathOp
+}
+
+struct RestPathFileJob {
+    let job: CodeGen.RestPathJob
+    var operations: [PathOp]
 }
 
 struct BuildState {

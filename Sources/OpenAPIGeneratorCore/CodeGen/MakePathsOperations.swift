@@ -2,7 +2,7 @@ import Foundation
 import OpenAPIKit30
 
 extension CodeGen {
-    func operationPathFiles() throws -> [GeneratedFile] {
+    func operationPathFileJobs() throws -> [PathFileJob] {
         let operations = try plan.document.paths.flatMap { path, item -> [(OpenAPI.Path, OpenAPI.PathItem, String, OpenAPI.Operation)] in
             guard shouldGeneratePath(path.rawValue) else { return [] }
             let resolved = try item.unwrapped(in: plan.document)
@@ -25,9 +25,7 @@ extension CodeGen {
                 usesStoredPath: false
             )
             let filename = names.type(operationID).rawValue
-            let body = renderOperation(declaration)
-            let source = sourceFile(imports: pathImports(), body: body)
-            return GeneratedFile(relativePath: "Paths/\(template(plan.config.paths.filenameTemplate, filename))", contents: source)
+            return .operation(OperationPathFileJob(filename: filename, declaration: declaration))
         }
     }
 }

@@ -31,6 +31,7 @@ Configuration files may be written as YAML or JSON and passed with `--config` or
   - [`mutableProperties`](#entitiesmutableproperties)
   - [`nameTemplate`](#entitiesnametemplate)
   - [`propertyTypeOverrides`](#entitiespropertytypeoverrides)
+  - [`sharedShapeTypes`](#entitiessharedshapetypes)
   - [`sortProperties`](#entitiessortproperties)
   - [`stringEnums`](#entitiesstringenums)
 - [`extensions`](#extensions)
@@ -722,6 +723,67 @@ Result:
 ```swift
 public struct Pet: Codable {
     public var tag: UUID?
+}
+```
+
+</details>
+
+## `entities.sharedShapeTypes`
+
+Type: `[String: String]`  
+Default: `[:]`
+
+Consolidates generated object types with the same properties and coding keys into one shared entity. The key is one generated duplicate type name, and the value is the shared type name to emit. Nested and path-local keys may use qualified names such as `User.Address` or `Paths.CreateWidgetResponse`. Comments from the source object are used on the shared entity.
+
+> [!CAUTION]
+> If updated schemas change a previously consolidated type to now be unique, then the type will no longer be consolidated. This may cause additional migration issues with your generated types.
+
+<details>
+<summary>Example</summary>
+
+Default:
+```swift
+public struct User: Codable {
+    public var address: Address?
+
+    public struct Address: Codable {
+        // User city address
+        public var city: String?
+        public var street: String?
+    }
+}
+
+public struct Organization: Codable {
+    public var address: Address?
+
+    public struct Address: Codable {
+        public var city: String?
+        public var street: String?
+    }
+}
+```
+
+Option:
+```yaml
+entities:
+  sharedShapeTypes:
+    User.Address: SharedAddress
+```
+
+Result:
+```swift
+public struct SharedAddress: Codable {
+    // User city address
+    public var city: String?
+    public var street: String?
+}
+
+public struct User: Codable {
+    public var address: SharedAddress?
+}
+
+public struct Organization: Codable {
+    public var address: SharedAddress?
 }
 ```
 
