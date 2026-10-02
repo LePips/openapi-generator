@@ -222,7 +222,6 @@ extension CodeGen {
 
     /// Reads the discriminator field first so decoding can pick the mapped case directly.
     func renderOneOfDecodeWithDiscriminator(properties: [Property], discriminator: Discriminator) -> String {
-        let propertyName = discriminator.propertyName == "Type" ? PropertyName("_Type") : PropertyName(discriminator.propertyName)
         let propertiesByType = Dictionary(grouping: properties, by: \.type)
         let cases = discriminator.mapping.sorted { $0.key < $1.key }.compactMap { key, type -> String? in
             guard let caseName = discriminator.cases[key] ?? propertiesByType[type]?.first?.name else { return nil }
@@ -233,11 +232,15 @@ extension CodeGen {
         \(access)init(from decoder: Decoder) throws {
 
             struct Discriminator: Decodable {
-                let \(propertyName.rawValue): String
+                let value: String
+
+                enum CodingKeys: String, CodingKey {
+                    case value = \(discriminator.propertyName.swiftStringLiteral)
+                }
             }
 
             let container = try decoder.singleValueContainer()
-            let discriminatorValue = try container.decode(Discriminator.self).\(propertyName.accessor)
+            let discriminatorValue = try container.decode(Discriminator.self).value
 
             switch discriminatorValue {
         \(cases.indented)
